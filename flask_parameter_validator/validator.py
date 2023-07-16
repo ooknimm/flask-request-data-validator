@@ -65,8 +65,8 @@ class ParameterValidator:
                 dependant.body_params[param_name] = field
         return dependant
 
-    def solve_path_params(self, path: Dict[str, Any]) -> Tuple[List[BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
-        solved: List[BaseModel] = []
+    def solve_path_params(self, path: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
         loc: Tuple[str, ...]
         for param_name, param in self.dependant.path_params.items():
@@ -90,18 +90,18 @@ class ParameterValidator:
                     errors.append(error)
                     break
                 else:
-                    solved.append(param.default)
+                    solved[param_name] = param.default
                     continue
 
             validated_param, _errors = param.validate(_received_path, loc=loc)
             if _errors:
                 errors.extend(_errors)
             if validated_param:
-                solved.append(validated_param)
+                solved[param_name] = validated_param
         return solved, errors
 
-    def solve_query_params(self, query: Dict[str, Any]) -> Tuple[List[BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
-        solved: List[BaseModel] = []
+    def solve_query_params(self, query: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
         loc: Tuple[str, ...]
         for param_name, param in self.dependant.query_params.items():
@@ -125,18 +125,18 @@ class ParameterValidator:
                     errors.append(error)
                     break
                 else:
-                    solved.append(param.default)
+                    solved[param_name] = param.default
                     continue
 
             validated_param, _errors = param.validate(_received_path, loc=loc)
             if _errors:
                 errors.extend(_errors)
             if validated_param:
-                solved.append(validated_param)
+                solved[param_name] = validated_param
         return solved, errors
 
-    def solve_body(self, received_body: Dict[str, Any]) -> Tuple[List[BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
-        solved: List[BaseModel] = []
+    def solve_body(self, received_body: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
         loc: Tuple[str, ...]
         # TODO embed, required param
@@ -166,43 +166,43 @@ class ParameterValidator:
                     errors.append(error)
                     break
                 else:
-                    solved.append(param.default)
+                    solved[param_name] = param.default
                     continue
 
             validated_param, _errors = param.validate(_received_body, loc=loc)
             if _errors:
                 errors.extend(_errors)
             if validated_param:
-                solved.append(validated_param)
+                solved[param_name] = validated_param
         return solved, errors
 
-    def solve_dependencies(self) -> Tuple[List[BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_dependencies(self) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         path: Dict[str, Any] = request.view_args or {}
         query: Dict[Any, Any] = request.args or {}
         received_body: Dict[str, Any] = request.json or {}
         # form_data: Dict[str, Any] = request.form or {}
         # files: Dict[str, Any] = request.files or {}
 
-        solved: List[BaseModel] = []
+        solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
 
         _params, _errors = self.solve_path_params(path)
         if _errors:
             errors.extend(_errors)
         if _params:
-            solved.extend(_params)
+            solved.update(_params)
 
         _params, _errors = self.solve_body(received_body)
         if _errors:
             errors.extend(_errors)
         if _params:
-            solved.extend(_params)
+            solved.update(_params)
 
         _params, _errors = self.solve_query_params(query)
         if _errors:
             errors.extend(_errors)
         if _params:
-            solved.extend(_params)
+            solved.update(_params)
 
         return solved, errors
 
@@ -210,7 +210,7 @@ class ParameterValidator:
         solved, errors = self.solve_dependencies()
         if errors:
             return Response(json.dumps({"detail": errors}), status=422, mimetype="application/json")
-        return self.call(*solved)
+        return self.call(**solved)
 
     def __repr__(self):
         return repr(self.call)
