@@ -97,7 +97,7 @@ class FieldAdapter:
         return [{**error, "loc": loc + error["loc"]} for error in errors]
 
     @property
-    def default(self):
+    def default(self) -> Any:
         return self.field_info.default
 
     def __repr__(self) -> str:
