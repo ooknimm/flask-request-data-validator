@@ -42,7 +42,7 @@ class FieldAdapter:
         max_length: Optional[int] = None,
         **extra: Any,
     ) -> None:
-        self.field_info = FieldInfo(
+        self._field_info = FieldInfo(
             default=default,
             alias=alias,
             title=title,
@@ -55,8 +55,10 @@ class FieldAdapter:
             max_length=max_length,
             **extra,
         )
-        self.title = title
-        self.type_adapter: TypeAdapter[Any] = TypeAdapter(Annotated[self.field_info.annotation, self.field_info])
+        self.type_adapter: TypeAdapter[Any] = self.get_type_adapter()
+
+    def get_type_adapter(self) -> TypeAdapter[Any]:
+        return TypeAdapter(Annotated[self.field_info.annotation, self.field_info])
 
     def validate(self, obj: Any, loc: Tuple[str, ...]) -> Tuple[Any, List[Dict[str, Any]]]:
         value, errors = None, []
@@ -100,8 +102,17 @@ class FieldAdapter:
     def default(self) -> Any:
         return self.field_info.default
 
+    @property
+    def field_info(self):
+        return self._field_info
+
+    @field_info.setter
+    def field_info(self, field_info: FieldInfo):
+        self._field_info = field_info
+        self.type_adapter = self.get_type_adapter()
+
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{(self.field_info.default)}"
+        return f"{self.__class__.__name__}({(self.field_info.default)})"
 
 
 class Param(FieldAdapter):

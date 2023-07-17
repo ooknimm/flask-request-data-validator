@@ -1,3 +1,4 @@
+import copy
 import inspect
 import json
 from functools import update_wrapper
@@ -40,6 +41,13 @@ class ParameterValidator:
         update_wrapper(self, call)
         self.dependant: Dependant = self.get_dependant()
 
+    def update_field_info(self, field: params.FieldAdapter, param_name: str, param: inspect.Parameter):
+        _field_info = field.field_info
+        _field_info.title = param_name
+        _field_info.default = param.default
+        _field_info.annotation = param.annotation
+        field.field_info = _field_info
+
     def get_dependant(self) -> Dependant:
         dependant = Dependant()
         func_signatures = inspect.signature(self.call)
@@ -50,15 +58,15 @@ class ParameterValidator:
             if get_origin(param.annotation) is Annotated:
                 annotated_param = get_args(param.annotation)
                 type_annotation = annotated_param[0]
-                target_param = annotated_param[1]
-                if isinstance(target_param, params.Body):
-                    field = params.Body(title=param_name, default=param.default, annotation=param.annotation)
+                field = annotated_param[1]
+                if isinstance(field, params.Body):
+                    self.update_field_info(field, param_name, param)
                     dependant.body_params[param_name] = field
-                elif isinstance(target_param, params.Path):
-                    field = params.Path(title=param_name, default=param.default, annotation=param.annotation)
+                elif isinstance(field, params.Path):
+                    self.update_field_info(field, param_name, param)
                     dependant.path_params[param_name] = field
-                elif isinstance(target_param, params.Query):
-                    field = params.Query(title=param_name, default=param.default, annotation=param.annotation)
+                elif isinstance(field, params.Query):
+                    self.update_field_info(field, param_name, param)
                     dependant.query_params[param_name] = field
             else:
                 field = params.Body(title=param_name, default=param.default, annotation=param.annotation)
@@ -187,22 +195,16 @@ class ParameterValidator:
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
 
         _params, _errors = self.solve_path_params(path)
-        if _errors:
-            errors.extend(_errors)
-        if _params:
-            solved.update(_params)
+        errors.extend(_errors)
+        solved.update(_params)
 
         _params, _errors = self.solve_body(received_body)
-        if _errors:
-            errors.extend(_errors)
-        if _params:
-            solved.update(_params)
+        errors.extend(_errors)
+        solved.update(_params)
 
         _params, _errors = self.solve_query_params(query)
-        if _errors:
-            errors.extend(_errors)
-        if _params:
-            solved.update(_params)
+        errors.extend(_errors)
+        solved.update(_params)
 
         return solved, errors
 

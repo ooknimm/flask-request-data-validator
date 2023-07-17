@@ -17,6 +17,12 @@ def put_user(user_id: Annotated[int, Path()], user: User):
     return jsonify({"user_id": user_id, **user.model_dump()})
 
 
+@app.post("/greater_than/<user_id>")
+@parameter_validator
+def greater_than(user_id: Annotated[int, Path(gt=10)]):
+    return jsonify({"user_id": user_id})
+
+
 @pytest.mark.parametrize(
     "path,body,expected_status,expected_response",
     [
@@ -46,5 +52,39 @@ def put_user(user_id: Annotated[int, Path()], user: User):
 )
 def test_path_params(path, body, expected_status, expected_response):
     response = client.put(path, json=body)
+    assert response.status_code == expected_status
+    assert response.get_json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,body,expected_status,expected_response",
+    [
+        (
+            "/greater_than/100",
+            {},
+            200,
+            {"user_id": 100},
+        ),
+        (
+            "/greater_than/1",
+            {},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "greater_than",
+                        "ctx": {"gt": 10},
+                        "input": "1",
+                        "loc": ["path", "user_id"],
+                        "msg": "Input should be greater than 10",
+                        "url": "https://errors.pydantic.dev/2.1.2/v/greater_than",
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_greater_than_path_params(path, body, expected_status, expected_response):
+    response = client.post(path, json=body)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
