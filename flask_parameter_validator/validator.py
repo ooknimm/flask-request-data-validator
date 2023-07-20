@@ -36,6 +36,8 @@ from flask_parameter_validator.model import Dependant
 
 JSON_TYPE = ["application/json"]
 
+ParamType = TypeVar("ParamType", bound=_params.FieldAdapter)
+
 
 class ParameterValidator:
     def __init__(self, call: Callable[..., Any]) -> None:
@@ -79,76 +81,6 @@ class ParameterValidator:
                 dependant.body_params[param_name] = field
         return dependant
 
-    def solve_path_params(self, path: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
-        solved: Dict[str, BaseModel] = {}
-        errors: List[Union[Dict[str, Any], ErrorDetails]] = []
-        loc: Tuple[str, ...]
-        for param_name, param in self.dependant.path_params.items():
-            loc = (
-                "path",
-                param_name,
-            )
-            _received_path = path.get(param_name)
-            if not _received_path:
-                if param.default is inspect.Signature.empty:
-                    error = ValidationError.from_exception_data(
-                        "Field required",
-                        [
-                            {
-                                "type": "missing",
-                                "loc": loc,
-                                "input": {},
-                            }
-                        ],
-                    ).errors()[0]
-                    errors.append(error)
-                    break
-                else:
-                    solved[param_name] = param.default
-                    continue
-
-            validated_param, _errors = param.validate(_received_path, loc=loc)
-            if _errors:
-                errors.extend(_errors)
-            if validated_param:
-                solved[param_name] = validated_param
-        return solved, errors
-
-    def solve_query_params(self, query: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
-        solved: Dict[str, BaseModel] = {}
-        errors: List[Union[Dict[str, Any], ErrorDetails]] = []
-        loc: Tuple[str, ...]
-        for param_name, param in self.dependant.query_params.items():
-            loc = (
-                "query",
-                param_name,
-            )
-            _received_path = query.get(param_name)
-            if not _received_path:
-                if param.default is inspect.Signature.empty:
-                    error = ValidationError.from_exception_data(
-                        "Field required",
-                        [
-                            {
-                                "type": "missing",
-                                "loc": loc,
-                                "input": {},
-                            }
-                        ],
-                    ).errors()[0]
-                    errors.append(error)
-                    break
-                else:
-                    solved[param_name] = param.default
-                    continue
-
-            validated_param, _errors = param.validate(_received_path, loc=loc)
-            if _errors:
-                errors.extend(_errors)
-            if validated_param:
-                solved[param_name] = validated_param
-        return solved, errors
-
     def solve_body(self, received_body: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
@@ -190,18 +122,20 @@ class ParameterValidator:
                 solved[param_name] = validated_param
         return solved, errors
 
-    def solve_header_params(self, headers: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_params(
+        self,
+        received_params: Dict[str, Any],
+        params: Dict[str, ParamType],
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
-        loc: Tuple[str, ...]
-        for param_name, param in self.dependant.header_params.items():
-            _param_name = param_name.replace("_", "-")
-            loc = (
-                "header",
-                _param_name,
-            )
-            _received_header = headers.get(param_name)
-            if not _received_header:
+        for param_name, param in params.items():
+            _param_name = param_name
+            if isinstance(param, _params.Header):
+                _param_name = param_name.replace("_", "-")
+            loc: Tuple[str, ...] = (param.__class__.__qualname__.lower(), _param_name)
+            _received_param = received_params.get(param_name)
+            if not _received_param:
                 if param.default is inspect.Signature.empty:
                     error = ValidationError.from_exception_data(
                         "Field required",
@@ -219,7 +153,7 @@ class ParameterValidator:
                     solved[param_name] = param.default
                     continue
 
-            vallidated_param, _errors = param.validate(_received_header, loc=loc)
+            vallidated_param, _errors = param.validate(_received_param, loc=loc)
             if _errors:
                 errors.extend(_errors)
             if vallidated_param:
@@ -240,15 +174,15 @@ class ParameterValidator:
         solved_params: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
 
-        _params, _errors = self.solve_header_params(headers)
+        _params, _errors = self.solve_params(headers, self.dependant.header_params)
         errors.extend(_errors)
         solved_params.update(_params)
 
-        _params, _errors = self.solve_path_params(path)
+        _params, _errors = self.solve_params(path, self.dependant.path_params)
         errors.extend(_errors)
         solved_params.update(_params)
 
-        _params, _errors = self.solve_query_params(query)
+        _params, _errors = self.solve_params(query, self.dependant.query_params)
         errors.extend(_errors)
         solved_params.update(_params)
 

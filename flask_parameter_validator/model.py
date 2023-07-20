@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Type
+from typing import Dict, Optional
 
 from flask_parameter_validator._params import Body, FieldAdapter, Header, Path, Query
 
