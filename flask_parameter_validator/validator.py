@@ -31,8 +31,10 @@ from pydantic_core import (
     core_schema,
 )
 
-from flask_parameter_validator import params
+from flask_parameter_validator import _params
 from flask_parameter_validator.model import Dependant
+
+JSON_TYPE = ["application/json"]
 
 
 class ParameterValidator:
@@ -41,10 +43,11 @@ class ParameterValidator:
         update_wrapper(self, call)
         self.dependant: Dependant = self.get_dependant()
 
-    def update_field_info(self, field: params.FieldAdapter, param_name: str, param: inspect.Parameter):
+    def update_field_info(self, field: _params.FieldAdapter, param_name: str, param: inspect.Parameter):
         _field_info = field.field_info
         _field_info.title = param_name
-        _field_info.default = param.default
+        if _field_info.default == PydanticUndefined:
+            _field_info.default = param.default
         _field_info.annotation = param.annotation
         field.field_info = _field_info
 
@@ -53,23 +56,26 @@ class ParameterValidator:
         func_signatures = inspect.signature(self.call)
         signature_params = func_signatures.parameters
 
-        field: params.FieldAdapter
+        field: _params.FieldAdapter
         for param_name, param in signature_params.items():
             if get_origin(param.annotation) is Annotated:
                 annotated_param = get_args(param.annotation)
                 type_annotation = annotated_param[0]
                 field = annotated_param[1]
-                if isinstance(field, params.Body):
+                if isinstance(field, _params.Body):
                     self.update_field_info(field, param_name, param)
                     dependant.body_params[param_name] = field
-                elif isinstance(field, params.Path):
+                elif isinstance(field, _params.Path):
                     self.update_field_info(field, param_name, param)
                     dependant.path_params[param_name] = field
-                elif isinstance(field, params.Query):
+                elif isinstance(field, _params.Query):
                     self.update_field_info(field, param_name, param)
                     dependant.query_params[param_name] = field
+                elif isinstance(field, _params.Header):
+                    self.update_field_info(field, param_name, param)
+                    dependant.header_params[param_name] = field
             else:
-                field = params.Body(title=param_name, default=param.default, annotation=param.annotation)
+                field = _params.Body(title=param_name, default=param.default, annotation=param.annotation)
                 dependant.body_params[param_name] = field
         return dependant
 
@@ -184,29 +190,73 @@ class ParameterValidator:
                 solved[param_name] = validated_param
         return solved, errors
 
+    def solve_header_params(self, headers: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        solved: Dict[str, BaseModel] = {}
+        errors: List[Union[Dict[str, Any], ErrorDetails]] = []
+        loc: Tuple[str, ...]
+        for param_name, param in self.dependant.header_params.items():
+            _param_name = param_name.replace("_", "-")
+            loc = (
+                "header",
+                _param_name,
+            )
+            _received_header = headers.get(param_name)
+            if not _received_header:
+                if param.default is inspect.Signature.empty:
+                    error = ValidationError.from_exception_data(
+                        "Field required",
+                        [
+                            {
+                                "type": "missing",
+                                "loc": loc,
+                                "input": {},
+                            }
+                        ],
+                    ).errors()[0]
+                    errors.append(error)
+                    break
+                else:
+                    solved[param_name] = param.default
+                    continue
+
+            vallidated_param, _errors = param.validate(_received_header, loc=loc)
+            if _errors:
+                errors.extend(_errors)
+            if vallidated_param:
+                solved[param_name] = vallidated_param
+        return solved, errors
+
     def solve_dependencies(self) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         path: Dict[str, Any] = request.view_args or {}
         query: Dict[Any, Any] = request.args or {}
-        received_body: Dict[str, Any] = request.json or {}
+        headers: Dict[str, Any] = request.headers
         # form_data: Dict[str, Any] = request.form or {}
         # files: Dict[str, Any] = request.files or {}
+        received_body: Dict[str, Any] = {}
+        media_type = headers.get("content-type")
+        if media_type in JSON_TYPE:
+            received_body = request.json or {}
 
-        solved: Dict[str, BaseModel] = {}
+        solved_params: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
+
+        _params, _errors = self.solve_header_params(headers)
+        errors.extend(_errors)
+        solved_params.update(_params)
 
         _params, _errors = self.solve_path_params(path)
         errors.extend(_errors)
-        solved.update(_params)
-
-        _params, _errors = self.solve_body(received_body)
-        errors.extend(_errors)
-        solved.update(_params)
+        solved_params.update(_params)
 
         _params, _errors = self.solve_query_params(query)
         errors.extend(_errors)
-        solved.update(_params)
+        solved_params.update(_params)
 
-        return solved, errors
+        _params, _errors = self.solve_body(received_body)
+        errors.extend(_errors)
+        solved_params.update(_params)
+
+        return solved_params, errors
 
     def __call__(self, *args, **kwargs):
         solved, errors = self.solve_dependencies()

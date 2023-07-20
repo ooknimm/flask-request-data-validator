@@ -1,17 +1,17 @@
 from typing import Dict, List, Optional, Type
 
-from flask_parameter_validator.params import FieldAdapter
+from flask_parameter_validator._params import Body, FieldAdapter, Header, Path, Query
 
 
 class Dependant:
     def __init__(
         self,
         *,
-        path_parmas: Optional[Dict[str, FieldAdapter]] = None,
-        query_params: Optional[Dict[str, FieldAdapter]] = None,
-        header_params: Optional[Dict[str, FieldAdapter]] = None,
+        path_parmas: Optional[Dict[str, Path]] = None,
+        query_params: Optional[Dict[str, Query]] = None,
+        header_params: Optional[Dict[str, Header]] = None,
         cookie_params: Optional[Dict[str, FieldAdapter]] = None,
-        body_params: Optional[Dict[str, FieldAdapter]] = None,
+        body_params: Optional[Dict[str, Body]] = None,
     ):
         self.path_params = path_parmas or {}
         self.query_params = query_params or {}
