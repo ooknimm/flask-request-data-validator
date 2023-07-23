@@ -196,7 +196,7 @@ class ParameterValidator:
         solved, errors = self.solve_dependencies()
         if errors:
             return Response(json.dumps({"detail": errors}), status=422, mimetype="application/json")
-        return self.call(**solved)
+        return self.call(*args, **{**kwargs, **solved})
 
     def __repr__(self):
         return repr(self.call)
