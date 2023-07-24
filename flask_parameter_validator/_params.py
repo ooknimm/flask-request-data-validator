@@ -19,13 +19,6 @@ from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any]]
 
 
-class ParamTypes(enum.Enum):
-    body = "body"
-    path = "path"
-    query = "query"
-    header = "header"
-
-
 class FieldAdapter:
     def __init__(
         self,
@@ -58,7 +51,7 @@ class FieldAdapter:
         self.type_adapter: TypeAdapter[Any] = self.get_type_adapter()
 
     def get_type_adapter(self) -> TypeAdapter[Any]:
-        return TypeAdapter(Annotated[self.field_info.annotation, self.field_info])
+        return TypeAdapter(Annotated[self.field_info.annotation, self.field_info])  # type: ignore
 
     def validate(self, obj: Any, loc: Tuple[str, ...]) -> Tuple[Any, List[Dict[str, Any]]]:
         value, errors = None, []

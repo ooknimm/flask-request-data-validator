@@ -1,40 +1,25 @@
-import copy
 import inspect
 import json
 from functools import update_wrapper
 from typing import (
-    TYPE_CHECKING,
     Annotated,
     Any,
     Callable,
     Dict,
     List,
-    NewType,
-    Optional,
     Tuple,
-    Type,
-    TypeAlias,
     TypeVar,
     Union,
-    cast,
     get_args,
     get_origin,
 )
 
-from flask import Response, jsonify, request
-from pydantic import BaseModel, RootModel, TypeAdapter, create_model, validator
-from pydantic_core import (
-    ErrorDetails,
-    PydanticUndefined,
-    SchemaValidator,
-    ValidationError,
-    core_schema,
-)
+from flask import Response, request
+from pydantic import BaseModel, create_model, validator
+from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.model import Dependant
-
-JSON_TYPE = ["application/json"]
 
 ParamType = TypeVar("ParamType", bound=_params.FieldAdapter)
 
@@ -64,7 +49,7 @@ class ParameterValidator:
                 annotated_param = get_args(param.annotation)
                 type_annotation = annotated_param[0]
                 field = annotated_param[1]
-                if isinstance(field, _params.Body):
+                if isinstance(field, _params.Body) or isinstance(field, _params.Form):
                     self.update_field_info(field, param_name, param)
                     dependant.body_params[param_name] = field
                 elif isinstance(field, _params.Path):
@@ -81,11 +66,21 @@ class ParameterValidator:
                 dependant.body_params[param_name] = field
         return dependant
 
-    def solve_body(self, received_body: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_body(self) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
         loc: Tuple[str, ...]
-        # TODO embed, required param
+        received_body: Dict[str, Any] = {}
+        # TODO embed
+
+        if not self.dependant.body_params:
+            return solved, errors
+
+        if any(param for param in self.dependant.body_params.values() if isinstance(param, _params.Form)):
+            received_body = dict(request.form)
+        else:
+            received_body = request.json or {}
+
         param_alias_omitted = len(self.dependant.body_params) == 1
         if param_alias_omitted:
             key = next(iter(self.dependant.body_params.keys()))
@@ -164,12 +159,6 @@ class ParameterValidator:
         path: Dict[str, Any] = request.view_args or {}
         query: Dict[Any, Any] = request.args or {}
         headers: Dict[str, Any] = request.headers
-        # form_data: Dict[str, Any] = request.form or {}
-        # files: Dict[str, Any] = request.files or {}
-        received_body: Dict[str, Any] = {}
-        media_type = headers.get("content-type")
-        if media_type in JSON_TYPE:
-            received_body = request.json or {}
 
         solved_params: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
@@ -186,7 +175,7 @@ class ParameterValidator:
         errors.extend(_errors)
         solved_params.update(_params)
 
-        _params, _errors = self.solve_body(received_body)
+        _params, _errors = self.solve_body()
         errors.extend(_errors)
         solved_params.update(_params)
 

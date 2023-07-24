@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 import pytest
 from flask import Flask, jsonify
 
-from flask_parameter_validator.param_functions import Body
+from flask_parameter_validator.param_functions import Body, Form
 from flask_parameter_validator.validator import parameter_validator
 from tests.conftest import Item, User
 
@@ -36,6 +36,12 @@ def put_item(item: Item, user: Optional[User] = None):
     if user:
         response.update({"user": user.model_dump()})
     return response
+
+
+@app.post("/form")
+@parameter_validator
+def form_item(item: Annotated[Item, Form()]):
+    return jsonify({"item": item.model_dump()})
 
 
 @pytest.mark.parametrize(
@@ -167,5 +173,33 @@ def test_optional_params(path, body, expected_status, expected_response):
 )
 def test_single_value_params(path, body, expected_status, expected_response):
     response = client.put(path, json=body)
+    assert response.status_code == expected_status
+    assert response.get_json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,body,expected_status,expected_response",
+    [
+        ("/form", {"name": "Foo", "price": 5000, "quantity": 50}, 200, {"item": {"name": "Foo", "price": 5000, "quantity": 50}}),
+        (
+            "/form",
+            {"price": 5000, "quantity": 50},
+            422,
+            {
+                "detail": [
+                    {
+                        "input": {"price": "5000", "quantity": "50"},
+                        "loc": ["body", "item", "name"],
+                        "msg": "Field required",
+                        "type": "missing",
+                        "url": "https://errors.pydantic.dev/2.1.2/v/missing",
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_form_data(path, body, expected_status, expected_response):
+    response = client.post(path, data=body)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
