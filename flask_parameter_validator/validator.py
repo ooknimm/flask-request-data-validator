@@ -62,6 +62,8 @@ class ParameterValidator:
                     self.update_field_info(field, param_name, param)
                     dependant.header_params[param_name] = field
             else:
+                if param.annotation is inspect._empty:
+                    continue
                 field = _params.Body(title=param_name, default=param.default, annotation=param.annotation)
                 dependant.body_params[param_name] = field
         return dependant
