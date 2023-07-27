@@ -15,7 +15,7 @@ from typing import (
 )
 
 from flask import Response, request
-from pydantic import BaseModel, create_model, validator
+from pydantic import BaseModel
 from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 
 from flask_parameter_validator import _params
