@@ -6,9 +6,9 @@ Only have to set api function's signature using type hint and pydantic.
 <br>
 
 ### requirements
-pyrhon >= 3.9
-pydantic >= 2.0
-flask
+- pyrhon >= 3.9
+- pydantic >= 2.0
+- flask
 
 <br>
 
