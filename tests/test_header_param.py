@@ -1,10 +1,9 @@
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, Optional
 
 import pytest
 from flask import Flask
 
-from flask_parameter_validator.param_functions import Header
-from flask_parameter_validator.validator import parameter_validator
+from flask_parameter_validator import Header, parameter_validator
 
 app = Flask(__name__)
 client = app.test_client()

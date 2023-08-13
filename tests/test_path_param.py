@@ -1,11 +1,10 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import pytest
 from flask import Flask, jsonify
 
-from flask_parameter_validator.param_functions import Path
-from flask_parameter_validator.validator import parameter_validator
-from tests.conftest import Item, User
+from flask_parameter_validator import Path, parameter_validator
+from tests.conftest import User
 
 app = Flask(__name__)
 client = app.test_client()

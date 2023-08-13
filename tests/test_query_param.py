@@ -3,9 +3,8 @@ from typing import Annotated, Optional
 import pytest
 from flask import Flask, jsonify
 
-from flask_parameter_validator.param_functions import Query
-from flask_parameter_validator.validator import parameter_validator
-from tests.conftest import Item, User
+from flask_parameter_validator import Query, parameter_validator
+from tests.conftest import User
 
 app = Flask(__name__)
 client = app.test_client()

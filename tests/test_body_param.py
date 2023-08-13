@@ -3,8 +3,7 @@ from typing import Annotated, Optional
 import pytest
 from flask import Flask, jsonify
 
-from flask_parameter_validator.param_functions import Body, Form
-from flask_parameter_validator.validator import parameter_validator
+from flask_parameter_validator import Body, Form, parameter_validator
 from tests.conftest import Item, User
 
 app = Flask(__name__)
