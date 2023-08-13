@@ -47,7 +47,7 @@ class FieldAdapter:
             max_length=max_length,
             **extra,
         )
-        self.type_adapter: TypeAdapter[Any] = self._get_type_adapter()
+        self._type_adapter: TypeAdapter[Any] = self._get_type_adapter()
 
     def _get_type_adapter(self) -> TypeAdapter[Any]:
         return TypeAdapter(Annotated[self.field_info.annotation, self.field_info])  # type: ignore
@@ -55,7 +55,7 @@ class FieldAdapter:
     def validate(self, obj: Any, loc: Tuple[str, ...]) -> Tuple[Any, List[Dict[str, Any]]]:
         value, errors = None, []
         try:
-            value = self.type_adapter.validate_python(obj)
+            value = self._type_adapter.validate_python(obj)
         except ValidationError as exc:
             errors = self._regenerate_with_loc(exc.errors(), loc=loc)
         return value, errors
@@ -74,7 +74,7 @@ class FieldAdapter:
         round_trip: bool = False,
         warnings: bool = True,
     ):
-        return self.type_adapter.dump_python(
+        return self._type_adapter.dump_python(
             __instance,
             mode=mode,
             include=include,
@@ -101,7 +101,7 @@ class FieldAdapter:
     @field_info.setter
     def field_info(self, field_info: FieldInfo):
         self._field_info = field_info
-        self.type_adapter = self._get_type_adapter()
+        self._type_adapter = self._get_type_adapter()
 
     @property
     def alias(self) -> Optional[str]:
