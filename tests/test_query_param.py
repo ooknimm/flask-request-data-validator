@@ -27,7 +27,14 @@ def greater_than(q: Annotated[Optional[int], Query(gt=40)] = None):
 
 @pytest.mark.parametrize(
     "path,body,expected_status,expected_response",
-    [("/users?q=query_string", {"name": "nick", "address": "seoul"}, 200, {"name": "nick", "address": "seoul", "q": "query_string"})],
+    [
+        (
+            "/users?q=query_string",
+            {"name": "nick", "address": "seoul"},
+            200,
+            {"name": "nick", "address": "seoul", "q": "query_string"},
+        )
+    ],
 )
 def test_query_string_param(path, body, expected_status, expected_response):
     response = client.post(path, json=body)

@@ -27,7 +27,9 @@ class ParameterValidator:
         update_wrapper(self, call)
         self.dependant: Dependant = self._get_dependant()
 
-    def _update_field_info(self, field: _params.FieldAdapter, param_name: str, param: inspect.Parameter):
+    def _update_field_info(
+        self, field: _params.FieldAdapter, param_name: str, param: inspect.Parameter
+    ):
         _field_info = field.field_info
         _field_info.title = param_name
         if _field_info.default == PydanticUndefined:
@@ -58,14 +60,21 @@ class ParameterValidator:
                 elif isinstance(field, _params.Header):
                     self._update_field_info(field, param_name, param)
                     dependant.header_params[param_name] = field
+                elif isinstance(field, _params.File):
+                    self._update_field_info(field, param_name, param)
+                    dependant.file_params[param_name] = field
             else:
                 if param.annotation is inspect._empty:
                     continue
-                field = _params.Body(title=param_name, default=param.default, annotation=param.annotation)
+                field = _params.Body(
+                    title=param_name, default=param.default, annotation=param.annotation
+                )
                 dependant.body_params[param_name] = field
         return dependant
 
-    def _solve_dependencies(self) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def _solve_dependencies(
+        self,
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved_params: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
 
@@ -79,8 +88,13 @@ class ParameterValidator:
         errors.extend(_errors)
         solved_params.update(_params)
 
-        query: Dict[str, str] = dict(request.args) or {}
+        query: Dict[str, str] = request.args or {}
         _params, _errors = self.dependant.solve_query_params(query)
+        errors.extend(_errors)
+        solved_params.update(_params)
+
+        files: Dict[str, Any] = request.files or {}
+        _params, _errors = self.dependant.solve_file_params(files)
         errors.extend(_errors)
         solved_params.update(_params)
 
@@ -98,7 +112,9 @@ class ParameterValidator:
     def __call__(self, *args, **kwargs):
         solved, errors = self._solve_dependencies()
         if errors:
-            return Response(json.dumps({"detail": errors}), status=422, mimetype="application/json")
+            return Response(
+                json.dumps({"detail": errors}), status=422, mimetype="application/json"
+            )
         return self._call(*args, **{**kwargs, **solved})
 
     def __repr__(self):

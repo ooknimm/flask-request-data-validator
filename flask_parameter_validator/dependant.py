@@ -7,6 +7,7 @@ from pydantic_core import ErrorDetails
 from flask_parameter_validator._params import (
     Body,
     FieldAdapter,
+    File,
     Form,
     Header,
     Path,
@@ -25,18 +26,24 @@ class Dependant:
         header_params: Optional[Dict[str, Header]] = None,
         cookie_params: Optional[Dict[str, FieldAdapter]] = None,
         body_params: Optional[Dict[str, Body]] = None,
+        file_params: Optional[Dict[str, File]] = None,
     ):
         self.path_params = path_parmas or {}
         self.query_params = query_params or {}
         self.header_params = header_params or {}
         self.cookie_params = cookie_params or {}
         self.body_params = body_params or {}
+        self.file_params = file_params or {}
 
     @property
     def is_form_type(self) -> bool:
-        return any(param for param in self.body_params.values() if isinstance(param, Form))
+        return any(
+            param for param in self.body_params.values() if isinstance(param, Form)
+        )
 
-    def solve_body(self, received_body: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_body(
+        self, received_body: Dict[str, Any]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
         loc: Tuple[str, ...]
@@ -118,11 +125,22 @@ class Dependant:
                 solved[param_name] = vallidated_param
         return solved, errors
 
-    def solve_header_params(self, headers: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_header_params(
+        self, headers: Dict[str, Any]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(headers, self.header_params)
 
-    def solve_path_params(self, path: Dict[str, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_path_params(
+        self, path: Dict[str, Any]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(path, self.path_params)
 
-    def solve_query_params(self, query: Dict[Any, Any]) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+    def solve_query_params(
+        self, query: Dict[Any, Any]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(query, self.query_params)
+
+    def solve_file_params(
+        self, files: Dict[str, Any]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        return self._solve_params(files, self.file_params)

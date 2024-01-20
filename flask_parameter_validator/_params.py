@@ -11,7 +11,7 @@ from typing import (
     Union,
 )
 
-from pydantic import TypeAdapter
+from pydantic import ConfigDict, TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 
@@ -52,7 +52,9 @@ class FieldAdapter:
     def _get_type_adapter(self) -> TypeAdapter[Any]:
         return TypeAdapter(Annotated[self.field_info.annotation, self.field_info])  # type: ignore
 
-    def validate(self, obj: Any, loc: Tuple[str, ...]) -> Tuple[Any, List[Dict[str, Any]]]:
+    def validate(
+        self, obj: Any, loc: Tuple[str, ...]
+    ) -> Tuple[Any, List[Dict[str, Any]]]:
         value, errors = None, []
         try:
             value = self._type_adapter.validate_python(obj)
@@ -255,7 +257,7 @@ class Form(Body):
         )
 
 
-class File(Form):
+class File(Param):
     def __init__(
         self,
         default: Any = PydanticUndefined,
@@ -288,6 +290,9 @@ class File(Form):
             max_length=max_length,
             **extra,
         )
+
+    def _get_type_adapter(self) -> TypeAdapter[Any]:
+        return TypeAdapter(Annotated[self.field_info.annotation, self.field_info], config={"arbitrary_types_allowed": True})  # type: ignore
 
 
 class Depends:

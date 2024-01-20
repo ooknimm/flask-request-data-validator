@@ -1,9 +1,12 @@
+import io
+from pathlib import Path
 from typing import Annotated, Optional
 
 import pytest
 from flask import Flask, jsonify
+from werkzeug.datastructures import FileStorage
 
-from flask_parameter_validator import Body, Form, parameter_validator
+from flask_parameter_validator import Body, File, Form, parameter_validator
 from tests.conftest import Item, User
 
 app = Flask(__name__)
@@ -43,10 +46,29 @@ def form_item(item: Annotated[Item, Form()]):
     return jsonify({"item": item.model_dump()})
 
 
+@app.post("/file")
+@parameter_validator
+def post_file(
+    file1: Annotated[FileStorage, File()],
+    file2: Annotated[Optional[FileStorage], File()] = None,
+):
+    file1_content = file1.stream.read().decode("utf-8")
+    result = {"file1": file1_content}
+    if file2:
+        file2_content = file2.stream.read().decode("utf-8")
+        result.update({"file2": file2_content})
+    return jsonify(result)
+
+
 @pytest.mark.parametrize(
     "path,body,expected_status,expected_response",
     [
-        ("/users", {"name": "Nick", "address": "seoul"}, 200, {"name": "Nick", "address": "seoul"}),
+        (
+            "/users",
+            {"name": "Nick", "address": "seoul"},
+            200,
+            {"name": "Nick", "address": "seoul"},
+        ),
         (
             "/users",
             {"name": "Nick", "address": 99},
@@ -92,9 +114,15 @@ def test_single_body_param(path, body, expected_status, expected_response):
     [
         (
             "/items",
-            {"user": {"name": "nick", "address": "seoul"}, "item": {"name": "Foo", "price": 5000, "quantity": 50}},
+            {
+                "user": {"name": "nick", "address": "seoul"},
+                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+            },
             200,
-            {"user": {"name": "nick", "address": "seoul"}, "item": {"name": "Foo", "price": 5000, "quantity": 50}},
+            {
+                "user": {"name": "nick", "address": "seoul"},
+                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+            },
         )
     ],
 )
@@ -109,9 +137,15 @@ def test_multiple_body_params(path, body, expected_status, expected_response):
     [
         (
             "/items",
-            {"user": {"name": "nick", "address": "seoul"}, "item": {"name": "Foo", "price": 5000, "quantity": 50}},
+            {
+                "user": {"name": "nick", "address": "seoul"},
+                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+            },
             200,
-            {"user": {"name": "nick", "address": "seoul"}, "item": {"name": "Foo", "price": 5000, "quantity": 50}},
+            {
+                "user": {"name": "nick", "address": "seoul"},
+                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+            },
         ),
         (
             "/items",
@@ -179,7 +213,12 @@ def test_single_value_params(path, body, expected_status, expected_response):
 @pytest.mark.parametrize(
     "path,body,expected_status,expected_response",
     [
-        ("/form", {"name": "Foo", "price": 5000, "quantity": 50}, 200, {"item": {"name": "Foo", "price": 5000, "quantity": 50}}),
+        (
+            "/form",
+            {"name": "Foo", "price": 5000, "quantity": 50},
+            200,
+            {"item": {"name": "Foo", "price": 5000, "quantity": 50}},
+        ),
         (
             "/form",
             {"price": 5000, "quantity": 50},
@@ -202,3 +241,24 @@ def test_form_data(path, body, expected_status, expected_response):
     response = client.post(path, data=body)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
+
+
+@pytest.mark.parametrize(
+    "path,files,expected_status,expected_response",
+    [
+        (
+            "/file",
+            {
+                "file1": (io.BytesIO(b"foo"), "file1"),
+                "file2": (io.BytesIO(b"bar"), "file2"),
+            },
+            200,
+            {"file1": "foo", "file2": "bar"},
+        ),
+        ("/file", {"file1": (io.BytesIO(b"foo"), "file1")}, 200, {"file1": "foo"}),
+    ],
+)
+def test_sned_file(path, files, expected_status, expected_response):
+    response = client.post(path, data=files, content_type="multipart/form-data")
+    assert response.status_code == expected_status
+    assert response.json == expected_response

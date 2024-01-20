@@ -19,7 +19,15 @@ def post_multiple(
     q1: Annotated[str, Query()],
     q2: Annotated[Optional[str], Query()] = None,
 ):
-    return jsonify({"user": user.model_dump(), "importance": importance, "id": id, "q1": q1, "q2": q2})
+    return jsonify(
+        {
+            "user": user.model_dump(),
+            "importance": importance,
+            "id": id,
+            "q1": q1,
+            "q2": q2,
+        }
+    )
 
 
 @pytest.mark.parametrize(
@@ -29,13 +37,25 @@ def post_multiple(
             "/multiple/1?q1=bar",
             {"user": {"name": "Foo", "address": "seoul"}, "importance": "1"},
             200,
-            {"id": 1, "importance": 1, "q1": "bar", "q2": None, "user": {"address": "seoul", "name": "Foo"}},
+            {
+                "id": 1,
+                "importance": 1,
+                "q1": "bar",
+                "q2": None,
+                "user": {"address": "seoul", "name": "Foo"},
+            },
         ),
         (
             "/multiple/1?q1=bar&q2=bar2",
             {"user": {"name": "Foo", "address": "seoul"}, "importance": "1"},
             200,
-            {"id": 1, "importance": 1, "q1": "bar", "q2": "bar2", "user": {"address": "seoul", "name": "Foo"}},
+            {
+                "id": 1,
+                "importance": 1,
+                "q1": "bar",
+                "q2": "bar2",
+                "user": {"address": "seoul", "name": "Foo"},
+            },
         ),
     ],
 )
