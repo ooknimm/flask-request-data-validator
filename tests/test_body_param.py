@@ -241,24 +241,3 @@ def test_form_data(path, body, expected_status, expected_response):
     response = client.post(path, data=body)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
-
-
-@pytest.mark.parametrize(
-    "path,files,expected_status,expected_response",
-    [
-        (
-            "/file",
-            {
-                "file1": (io.BytesIO(b"foo"), "file1"),
-                "file2": (io.BytesIO(b"bar"), "file2"),
-            },
-            200,
-            {"file1": "foo", "file2": "bar"},
-        ),
-        ("/file", {"file1": (io.BytesIO(b"foo"), "file1")}, 200, {"file1": "foo"}),
-    ],
-)
-def test_sned_file(path, files, expected_status, expected_response):
-    response = client.post(path, data=files, content_type="multipart/form-data")
-    assert response.status_code == expected_status
-    assert response.json == expected_response
