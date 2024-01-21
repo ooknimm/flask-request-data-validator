@@ -24,14 +24,12 @@ class Dependant:
         path_parmas: Optional[Dict[str, Path]] = None,
         query_params: Optional[Dict[str, Query]] = None,
         header_params: Optional[Dict[str, Header]] = None,
-        cookie_params: Optional[Dict[str, FieldAdapter]] = None,
         body_params: Optional[Dict[str, Body]] = None,
         file_params: Optional[Dict[str, File]] = None,
     ):
         self.path_params = path_parmas or {}
         self.query_params = query_params or {}
         self.header_params = header_params or {}
-        self.cookie_params = cookie_params or {}
         self.body_params = body_params or {}
         self.file_params = file_params or {}
 

@@ -183,10 +183,6 @@ class Query(Param):
     pass
 
 
-class Cookie(Param):
-    pass
-
-
 class Body(FieldAdapter):
     def __init__(
         self,
