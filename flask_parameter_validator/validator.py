@@ -37,6 +37,29 @@ class ParameterValidator:
         _field_info.annotation = param.annotation
         field.field_info = _field_info
 
+    def _update_params(
+        self,
+        dependant: Dependant,
+        param_name: str,
+        param: inspect.Parameter,
+        field: _params.FieldAdapter,
+    ) -> None:
+        if isinstance(field, _params.Body) or isinstance(field, _params.Form):
+            self._update_field_info(field, param_name, param)
+            dependant.body_params[param_name] = field
+        elif isinstance(field, _params.Path):
+            self._update_field_info(field, param_name, param)
+            dependant.path_params[param_name] = field
+        elif isinstance(field, _params.Query):
+            self._update_field_info(field, param_name, param)
+            dependant.query_params[param_name] = field
+        elif isinstance(field, _params.Header):
+            self._update_field_info(field, param_name, param)
+            dependant.header_params[param_name] = field
+        elif isinstance(field, _params.File):
+            self._update_field_info(field, param_name, param)
+            dependant.file_params[param_name] = field
+
     def _get_dependant(self) -> Dependant:
         dependant = Dependant()
         func_signatures = inspect.signature(self._call)
@@ -48,21 +71,17 @@ class ParameterValidator:
                 annotated_param = get_args(param.annotation)
                 # type_annotation = annotated_param[0]
                 field = annotated_param[1]
-                if isinstance(field, _params.Body) or isinstance(field, _params.Form):
-                    self._update_field_info(field, param_name, param)
-                    dependant.body_params[param_name] = field
-                elif isinstance(field, _params.Path):
-                    self._update_field_info(field, param_name, param)
-                    dependant.path_params[param_name] = field
-                elif isinstance(field, _params.Query):
-                    self._update_field_info(field, param_name, param)
-                    dependant.query_params[param_name] = field
-                elif isinstance(field, _params.Header):
-                    self._update_field_info(field, param_name, param)
-                    dependant.header_params[param_name] = field
-                elif isinstance(field, _params.File):
-                    self._update_field_info(field, param_name, param)
-                    dependant.file_params[param_name] = field
+                self._update_params(
+                    dependant=dependant, param_name=param_name, param=param, field=field
+                )
+
+            elif isinstance(param.default, _params.FieldAdapter):
+                self._update_params(
+                    dependant=dependant,
+                    param_name=param_name,
+                    param=param,
+                    field=param.default,
+                )
             else:
                 if param.annotation is inspect._empty:
                     continue
