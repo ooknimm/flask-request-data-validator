@@ -7,7 +7,7 @@ from flask import Flask, jsonify
 from werkzeug.datastructures import FileStorage
 
 from flask_parameter_validator import Body, File, Form, parameter_validator
-from tests.conftest import Item, User
+from tests.conftest import Item, User, match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
@@ -16,6 +16,12 @@ client = app.test_client()
 @app.post("/users")
 @parameter_validator
 def create_user(user: User):
+    return jsonify(user.model_dump())
+
+
+@app.post("/users-embed")
+@parameter_validator
+def create_user_embed(user: User = Body(embed=True)):
     return jsonify(user.model_dump())
 
 
@@ -66,7 +72,7 @@ def form_item(item: Annotated[Item, Form()]):
                         "loc": ["body", "user", "address"],
                         "msg": "Input should be a valid string",
                         "input": 99,
-                        "url": "https://errors.pydantic.dev/2.1.2/v/string_type",
+                        "url": match_pydantic_error_url("string_type"),
                     }
                 ]
             },
@@ -82,10 +88,16 @@ def form_item(item: Annotated[Item, Form()]):
                         "loc": ["body", "user"],
                         "msg": "Field required",
                         "input": {},
-                        "url": "https://errors.pydantic.dev/2.1.2/v/missing",
+                        "url": match_pydantic_error_url("missing"),
                     }
                 ]
             },
+        ),
+        (
+            "/users-embed",
+            {"user": {"name": "Nick", "address": "seoul"}},
+            200,
+            {"name": "Nick", "address": "seoul"},
         ),
     ],
 )
@@ -150,7 +162,7 @@ def test_multiple_body_params(path, body, expected_status, expected_response):
                         "loc": ["body", "item", "quantity"],
                         "msg": "Input should be a valid integer, unable to parse string as an integer",
                         "input": "i don't know",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/int_parsing",
+                        "url": match_pydantic_error_url("int_parsing"),
                     }
                 ]
             },
@@ -183,7 +195,7 @@ def test_optional_params(path, body, expected_status, expected_response):
                         "loc": ["body", "importance"],
                         "msg": "Input should be a valid integer, unable to parse string as an integer",
                         "input": "not integer",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/int_parsing",
+                        "url": match_pydantic_error_url("int_parsing"),
                     }
                 ]
             },
@@ -216,7 +228,7 @@ def test_single_value_params(path, body, expected_status, expected_response):
                         "loc": ["body", "item", "name"],
                         "msg": "Field required",
                         "type": "missing",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/missing",
+                        "url": match_pydantic_error_url("missing"),
                     }
                 ]
             },

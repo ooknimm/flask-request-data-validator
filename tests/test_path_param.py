@@ -4,7 +4,7 @@ import pytest
 from flask import Flask, jsonify
 
 from flask_parameter_validator import Path, parameter_validator
-from tests.conftest import User
+from tests.conftest import User, match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
@@ -76,7 +76,7 @@ def test_path_params(path, body, expected_status, expected_response):
                         "input": "1",
                         "loc": ["path", "user_id"],
                         "msg": "Input should be greater than 10",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/greater_than",
+                        "url": match_pydantic_error_url("greater_than"),
                     }
                 ]
             },

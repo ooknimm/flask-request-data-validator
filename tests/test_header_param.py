@@ -4,6 +4,7 @@ import pytest
 from flask import Flask
 
 from flask_parameter_validator import Header, parameter_validator
+from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
@@ -40,7 +41,7 @@ def required_header(x_token: Annotated[str, Header(max_length=5)]):
                         "loc": ["header", "x-token"],
                         "msg": "String should have at most 5 characters",
                         "type": "string_too_long",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/string_too_long",
+                        "url": match_pydantic_error_url("string_too_long"),
                     }
                 ]
             },
@@ -56,7 +57,7 @@ def required_header(x_token: Annotated[str, Header(max_length=5)]):
                         "loc": ["header", "x-token"],
                         "msg": "Field required",
                         "type": "missing",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/missing",
+                        "url": match_pydantic_error_url("missing"),
                     }
                 ]
             },

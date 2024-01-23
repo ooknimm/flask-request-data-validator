@@ -4,7 +4,7 @@ import pytest
 from flask import Flask, jsonify
 
 from flask_parameter_validator import Query, parameter_validator
-from tests.conftest import User
+from tests.conftest import User, match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
@@ -58,14 +58,16 @@ def test_query_string_param(path, body, expected_status, expected_response):
                         "input": "30",
                         "loc": ["query", "q"],
                         "msg": "Input should be greater than 40",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/greater_than",
+                        "url": match_pydantic_error_url("greater_than"),
                     }
                 ]
             },
         ),
     ],
 )
-def test_greater_than_query_string_param(path, body, expected_status, expected_response):
+def test_greater_than_query_string_param(
+    path, body, expected_status, expected_response
+):
     response = client.post(path, json=body)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
