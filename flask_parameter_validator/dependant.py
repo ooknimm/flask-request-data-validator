@@ -40,12 +40,10 @@ class Dependant:
         )
 
     def solve_body(
-        self, received_body: Dict[str, Any]
+        self, received_body: Optional[Dict[str, Any]]
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
-        loc: Tuple[str, ...]
-        # TODO embed
         if not self.body_params:
             return solved, errors
         key = next(iter(self.body_params.keys()))
@@ -55,13 +53,21 @@ class Dependant:
             received_body = {key: received_body}
 
         for param_name, param in self.body_params.items():
-            loc = (
-                "body",
-                param_name,
-            )
-            _received_body = received_body.get(param_name)
-            if not _received_body:
-                if param.default is inspect.Signature.empty:
+            loc: Tuple[str, ...]
+            if param_alias_omitted:
+                loc = ("body",)
+            else:
+                loc = (
+                    "body",
+                    param_name,
+                )
+            value: Optional[Any] = None
+            if received_body is not None:
+                value = received_body.get(param_name)
+            if value is None:
+                if param.default is inspect.Signature.empty or isinstance(
+                    param.default, FieldAdapter
+                ):
                     error = ValidationError.from_exception_data(
                         "Field required",
                         [
@@ -72,17 +78,17 @@ class Dependant:
                             }
                         ],
                     ).errors()[0]
+                    error["input"] = None
                     errors.append(error)
-                    break
                 else:
                     solved[param_name] = param.default
                     continue
-
-            validated_param, _errors = param.validate(_received_body, loc=loc)
-            if _errors:
-                errors.extend(_errors)
-            if validated_param:
-                solved[param_name] = validated_param
+            else:
+                validated_param, _errors = param.validate(value, loc=loc)
+                if _errors:
+                    errors.extend(_errors)
+                if validated_param:
+                    solved[param_name] = validated_param
         return solved, errors
 
     def _solve_params(
@@ -106,7 +112,7 @@ class Dependant:
                             {
                                 "type": "missing",
                                 "loc": loc,
-                                "input": {},
+                                "input": None,
                             }
                         ],
                     ).errors()[0]

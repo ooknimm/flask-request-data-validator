@@ -13,8 +13,9 @@ from typing import (
     get_origin,
 )
 
+import werkzeug.exceptions
 from flask import Response, request
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
 
 from flask_parameter_validator import _params
@@ -121,11 +122,13 @@ class ParameterValidator:
             if self.dependant.is_form_type:
                 received_body = dict(request.form)
             else:
-                received_body = request.json or {}
+                if request.is_json:
+                    received_body = request.json or {}
+                else:
+                    received_body = None
             _params, _errors = self.dependant.solve_body(received_body)
             errors.extend(_errors)
             solved_params.update(_params)
-
         return solved_params, errors
 
     def __call__(self, *args, **kwargs):
