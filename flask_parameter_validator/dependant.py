@@ -48,10 +48,10 @@ class Dependant:
         # TODO embed
         if not self.body_params:
             return solved, errors
-
-        param_alias_omitted = len(self.body_params) == 1
+        key = next(iter(self.body_params.keys()))
+        embed = getattr(self.body_params[key], "embed", False)
+        param_alias_omitted = len(self.body_params) == 1 and not embed
         if param_alias_omitted:
-            key = next(iter(self.body_params.keys()))
             received_body = {key: received_body}
 
         for param_name, param in self.body_params.items():
