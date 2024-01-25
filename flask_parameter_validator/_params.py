@@ -57,7 +57,7 @@ class FieldAdapter:
     ) -> Tuple[Any, List[Dict[str, Any]]]:
         value, errors = None, []
         try:
-            value = self._type_adapter.validate_python(obj)
+            value = self._type_adapter.validate_python(obj, from_attributes=True)
         except ValidationError as exc:
             errors = self._regenerate_with_loc(exc.errors(), loc=loc)
         return value, errors
@@ -253,7 +253,7 @@ class Form(Body):
         )
 
 
-class File(Param):
+class File(Form):
     def __init__(
         self,
         default: Any = PydanticUndefined,

@@ -13,229 +13,248 @@ app = Flask(__name__)
 client = app.test_client()
 
 
-@app.post("/users")
+@app.post("/items/")
 @parameter_validator
-def create_user(user: User):
-    return jsonify(user.model_dump())
+def create_item(item: Item):
+    return jsonify(item.model_dump())
 
 
-@app.post("/users-embed")
-@parameter_validator
-def create_user_embed(user: User = Body(embed=True)):
-    return jsonify(user.model_dump())
+def test_body_float():
+    response = client.post("/items/", json={"name": "Foo", "price": 50.5})
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "name": "Foo",
+        "price": 50.5,
+        "description": None,
+        "tax": None,
+    }
 
 
-@app.put("/users")
-@parameter_validator
-def put_user(user: User, importance: Annotated[int, Body()]):
-    return jsonify({"user": user.model_dump(), "importance": importance})
+def test_post_with_str_float():
+    response = client.post("/items/", json={"name": "Foo", "price": "50.5"})
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "name": "Foo",
+        "price": 50.5,
+        "description": None,
+        "tax": None,
+    }
 
 
-@app.post("/items")
-@parameter_validator
-def create_item(item: Item, user: User):
-    return jsonify({"item": item.model_dump(), "user": user.model_dump()})
+def test_post_with_str_float_description():
+    response = client.post(
+        "/items/", json={"name": "Foo", "price": "50.5", "description": "Some Foo"}
+    )
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "name": "Foo",
+        "price": 50.5,
+        "description": "Some Foo",
+        "tax": None,
+    }
 
 
-@app.put("/items")
-@parameter_validator
-def put_item(item: Item, user: Optional[User] = None):
-    response = {"item": item.model_dump()}
-    if user:
-        response.update({"user": user.model_dump()})
-    return response
+def test_post_with_str_float_description_tax():
+    response = client.post(
+        "/items/",
+        json={"name": "Foo", "price": "50.5", "description": "Some Foo", "tax": 0.3},
+    )
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "name": "Foo",
+        "price": 50.5,
+        "description": "Some Foo",
+        "tax": 0.3,
+    }
 
 
-@app.post("/form")
-@parameter_validator
-def form_item(item: Annotated[Item, Form()]):
-    return jsonify({"item": item.model_dump()})
-
-
-@pytest.mark.parametrize(
-    "path,body,expected_status,expected_response",
-    [
-        (
-            "/users",
-            {"name": "Nick", "address": "seoul"},
-            200,
-            {"name": "Nick", "address": "seoul"},
-        ),
-        (
-            "/users",
-            {"name": "Nick", "address": 99},
-            422,
+def test_post_with_only_name():
+    response = client.post("/items/", json={"name": "Foo"})
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
             {
-                "detail": [
-                    {
-                        "type": "string_type",
-                        "loc": ["body", "user", "address"],
-                        "msg": "Input should be a valid string",
-                        "input": 99,
-                        "url": match_pydantic_error_url("string_type"),
-                    }
-                ]
-            },
-        ),
-        (
-            "/users",
-            {},
-            422,
-            {
-                "detail": [
-                    {
-                        "type": "missing",
-                        "loc": ["body", "user"],
-                        "msg": "Field required",
-                        "input": {},
-                        "url": match_pydantic_error_url("missing"),
-                    }
-                ]
-            },
-        ),
-        (
-            "/users-embed",
-            {"user": {"name": "Nick", "address": "seoul"}},
-            200,
-            {"name": "Nick", "address": "seoul"},
-        ),
-    ],
-)
-def test_single_body_param(path, body, expected_status, expected_response):
-    response = client.post(path, json=body)
-    assert response.status_code == expected_status
-    assert response.get_json() == expected_response
+                "type": "missing",
+                "loc": ["body", "price"],
+                "msg": "Field required",
+                "input": {"name": "Foo"},
+                "url": match_pydantic_error_url("missing"),
+            }
+        ]
+    }
 
 
-@pytest.mark.parametrize(
-    "path,body,expected_status,expected_response",
-    [
-        (
-            "/items",
+def test_post_with_only_name_price():
+    response = client.post("/items/", json={"name": "Foo", "price": "twenty"})
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
             {
-                "user": {"name": "nick", "address": "seoul"},
-                "item": {"name": "Foo", "price": 5000, "quantity": 50},
-            },
-            200,
-            {
-                "user": {"name": "nick", "address": "seoul"},
-                "item": {"name": "Foo", "price": 5000, "quantity": 50},
-            },
-        )
-    ],
-)
-def test_multiple_body_params(path, body, expected_status, expected_response):
-    response = client.post(path, json=body)
-    assert response.status_code == expected_status
-    assert response.get_json() == expected_response
+                "type": "float_parsing",
+                "loc": ["body", "price"],
+                "msg": "Input should be a valid number, unable to parse string as a number",
+                "input": "twenty",
+                "url": match_pydantic_error_url("float_parsing"),
+            }
+        ]
+    }
 
 
-@pytest.mark.parametrize(
-    "path,body,expected_status,expected_response",
-    [
-        (
-            "/items",
+def test_post_with_no_data():
+    response = client.post("/items/", json={})
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
             {
-                "user": {"name": "nick", "address": "seoul"},
-                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+                "type": "missing",
+                "loc": ["body", "name"],
+                "msg": "Field required",
+                "input": {},
+                "url": match_pydantic_error_url("missing"),
             },
-            200,
             {
-                "user": {"name": "nick", "address": "seoul"},
-                "item": {"name": "Foo", "price": 5000, "quantity": 50},
+                "type": "missing",
+                "loc": ["body", "price"],
+                "msg": "Field required",
+                "input": {},
+                "url": match_pydantic_error_url("missing"),
             },
-        ),
-        (
-            "/items",
-            {"item": {"name": "Foo", "price": 5000, "quantity": 50}},
-            200,
-            {"item": {"name": "Foo", "price": 5000, "quantity": 50}},
-        ),
-        (
-            "/items",
-            {"item": {"name": "Foo", "price": 5000, "quantity": "i don't know"}},
-            422,
-            {
-                "detail": [
-                    {
-                        "type": "int_parsing",
-                        "loc": ["body", "item", "quantity"],
-                        "msg": "Input should be a valid integer, unable to parse string as an integer",
-                        "input": "i don't know",
-                        "url": match_pydantic_error_url("int_parsing"),
-                    }
-                ]
-            },
-        ),
-    ],
-)
-def test_optional_params(path, body, expected_status, expected_response):
-    response = client.put(path, json=body)
-    assert response.status_code == expected_status
-    assert response.get_json() == expected_response
+        ]
+    }
 
 
-@pytest.mark.parametrize(
-    "path,body,expected_status,expected_response",
-    [
-        (
-            "/users",
-            {"user": {"name": "nick", "address": "seoul"}, "importance": 3},
-            200,
-            {"user": {"name": "nick", "address": "seoul"}, "importance": 3},
-        ),
-        (
-            "/users",
-            {"user": {"name": "nick", "address": "seoul"}, "importance": "not integer"},
-            422,
+def test_post_with_none():
+    response = client.post("/items/", json=None)
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
             {
-                "detail": [
-                    {
-                        "type": "int_parsing",
-                        "loc": ["body", "importance"],
-                        "msg": "Input should be a valid integer, unable to parse string as an integer",
-                        "input": "not integer",
-                        "url": match_pydantic_error_url("int_parsing"),
-                    }
-                ]
-            },
-        ),
-    ],
-)
-def test_single_value_params(path, body, expected_status, expected_response):
-    response = client.put(path, json=body)
-    assert response.status_code == expected_status
-    assert response.get_json() == expected_response
+                "type": "missing",
+                "loc": ["body"],
+                "msg": "Field required",
+                "input": None,
+                "url": match_pydantic_error_url("missing"),
+            }
+        ]
+    }
 
 
-@pytest.mark.parametrize(
-    "path,body,expected_status,expected_response",
-    [
-        (
-            "/form",
-            {"name": "Foo", "price": 5000, "quantity": 50},
-            200,
-            {"item": {"name": "Foo", "price": 5000, "quantity": 50}},
-        ),
-        (
-            "/form",
-            {"price": 5000, "quantity": 50},
-            422,
+def test_post_broken_body():
+    response = client.post(
+        "/items/",
+        headers={"content-type": "application/json"},
+        data="{some broken json}",
+    )
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
             {
-                "detail": [
-                    {
-                        "input": {"price": "5000", "quantity": "50"},
-                        "loc": ["body", "item", "name"],
-                        "msg": "Field required",
-                        "type": "missing",
-                        "url": match_pydantic_error_url("missing"),
-                    }
-                ]
-            },
-        ),
-    ],
-)
-def test_form_data(path, body, expected_status, expected_response):
-    response = client.post(path, data=body)
-    assert response.status_code == expected_status
-    assert response.get_json() == expected_response
+                "type": "json_invalid",
+                "loc": ["body", 1],
+                "msg": "JSON decode error",
+                "input": {},
+                "ctx": {"error": "Expecting property name enclosed in double quotes"},
+            }
+        ]
+    }
+
+
+def test_post_form_for_json():
+    response = client.post("/items/", data={"name": "Foo", "price": 50.5})
+    assert response.status_code == 422, response.text
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "missing",
+                "loc": ["body"],
+                "msg": "Field required",
+                "input": None,
+                "url": match_pydantic_error_url("missing"),
+            }
+        ]
+    }
+
+
+def test_explicit_content_type():
+    response = client.post(
+        "/items/",
+        data='{"name": "Foo", "price": 50.5}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 200, response.text
+
+
+def test_geo_json():
+    response = client.post(
+        "/items/",
+        data='{"name": "Foo", "price": 50.5}',
+        headers={"Content-Type": "application/geo+json"},
+    )
+    assert response.status_code == 200, response.text
+
+
+def test_no_content_type_is_json():
+    response = client.post(
+        "/items/",
+        data='{"name": "Foo", "price": 50.5}',
+    )
+    assert response.status_code == 200, response.text
+    assert response.get_json() == {
+        "name": "Foo",
+        "description": None,
+        "price": 50.5,
+        "tax": None,
+    }
+
+
+def test_wrong_headers():
+    data = '{"name": "Foo", "price": 50.5}'
+    response = client.post("/items/", data=data, headers={"Content-Type": "text/plain"})
+    assert response.status_code == 422, response.text
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "model_attributes_type",
+                "loc": ["body"],
+                "msg": "Input should be a valid dictionary or object to extract fields from",
+                "input": '{"name": "Foo", "price": 50.5}',
+                "url": match_pydantic_error_url("model_attributes_type"),
+            }
+        ]
+    }
+    response = client.post(
+        "/items/", data=data, headers={"Content-Type": "application/geo+json-seq"}
+    )
+    assert response.status_code == 422, response.text
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "model_attributes_type",
+                "loc": ["body"],
+                "msg": "Input should be a valid dictionary or object to extract fields from",
+                "input": '{"name": "Foo", "price": 50.5}',
+                "url": match_pydantic_error_url("model_attributes_type"),
+            }
+        ]
+    }
+    response = client.post(
+        "/items/", data=data, headers={"Content-Type": "application/not-really-json"}
+    )
+    assert response.status_code == 422, response.text
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "model_attributes_type",
+                "loc": ["body"],
+                "msg": "Input should be a valid dictionary or object to extract fields from",
+                "input": '{"name": "Foo", "price": 50.5}',
+                "url": match_pydantic_error_url("model_attributes_type"),
+            }
+        ]
+    }
+
+
+# def test_other_exceptions():
+#     with patch("json.loads", side_effect=Exception):
+#         response = client.post("/items/", json={"test": "test2"})
+#         assert response.status_code == 400, response.text

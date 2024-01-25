@@ -20,6 +20,7 @@ from pydantic_core import ErrorDetails, PydanticUndefined
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.dependant import Dependant
+from flask_parameter_validator.utils import ResponseEncoder
 
 
 class ParameterValidator:
@@ -119,13 +120,32 @@ class ParameterValidator:
         solved_params.update(_params)
 
         if self.dependant.body_params:
+            received_body: Union[Dict[str, str], bytes, None] = None
             if self.dependant.is_form_type:
                 received_body = dict(request.form)
             else:
-                if request.is_json:
-                    received_body = request.json or {}
-                else:
-                    received_body = None
+                body_bytes = request.get_data()
+                if body_bytes and not request.content_type or request.is_json:
+                    json_body = request.get_json(silent=True)
+                    if json_body is not None:
+                        received_body = json_body
+                    else:
+                        try:
+                            json_body = json.loads(body_bytes.decode())
+                            received_body = json_body
+                        except json.JSONDecodeError as e:
+                            validation_error = {
+                                "type": "json_invalid",
+                                "loc": ("body", e.pos),
+                                "msg": "JSON decode error",
+                                "input": {},
+                                "ctx": {"error": e.msg},
+                            }
+                            errors.append(validation_error)
+                            return solved_params, errors
+                if received_body is None and body_bytes:
+                    received_body = body_bytes
+
             _params, _errors = self.dependant.solve_body(received_body)
             errors.extend(_errors)
             solved_params.update(_params)
@@ -135,7 +155,9 @@ class ParameterValidator:
         solved, errors = self._solve_dependencies()
         if errors:
             return Response(
-                json.dumps({"detail": errors}), status=422, mimetype="application/json"
+                json.dumps({"detail": errors}, cls=ResponseEncoder),
+                status=422,
+                mimetype="application/json",
             )
         return self._call(*args, **{**kwargs, **solved})
 

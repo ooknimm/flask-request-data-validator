@@ -40,7 +40,7 @@ class Dependant:
         )
 
     def solve_body(
-        self, received_body: Optional[Dict[str, Any]]
+        self, received_body: Optional[Union[Dict[str, Any], bytes]]
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
@@ -63,7 +63,25 @@ class Dependant:
                 )
             value: Optional[Any] = None
             if received_body is not None:
-                value = received_body.get(param_name)
+                try:
+                    if isinstance(received_body, dict):
+                        value = received_body.get(param_name)
+                    else:
+                        raise AttributeError
+                except AttributeError:
+                    error = ValidationError.from_exception_data(
+                        "Field required",
+                        [
+                            {
+                                "type": "missing",
+                                "loc": loc,
+                                "input": {},
+                            }
+                        ],
+                    ).errors()[0]
+                    error["input"] = None
+                    errors.append(error)
+                    continue
             if value is None:
                 if param.default is inspect.Signature.empty or isinstance(
                     param.default, FieldAdapter
