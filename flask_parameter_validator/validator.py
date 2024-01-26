@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    Optional,
     Tuple,
     Union,
     get_args,
@@ -73,24 +74,22 @@ class ParameterValidator:
                 annotated_param = get_args(param.annotation)
                 # type_annotation = annotated_param[0]
                 field = annotated_param[1]
-                self._update_params(
-                    dependant=dependant, param_name=param_name, param=param, field=field
-                )
-
             elif isinstance(param.default, _params.FieldAdapter):
-                self._update_params(
-                    dependant=dependant,
-                    param_name=param_name,
-                    param=param,
-                    field=param.default,
-                )
+                field = param.default
+            elif param.annotation is inspect._empty:
+                continue
             else:
-                if param.annotation is inspect._empty:
-                    continue
                 field = _params.Body(
-                    title=param_name, default=param.default, annotation=param.annotation
+                    title=param_name,
+                    default=param.default,
+                    annotation=param.annotation,
                 )
-                dependant.body_params[param_name] = field
+            self._update_params(
+                dependant=dependant,
+                param_name=param_name,
+                param=param,
+                field=field,
+            )
         return dependant
 
     def _solve_dependencies(
