@@ -1,12 +1,11 @@
 import io
-from pathlib import Path
 from typing import Annotated, Optional
 
 import pytest
 from flask import Flask, jsonify
 from werkzeug.datastructures import FileStorage
 
-from flask_parameter_validator import Body, File, Form, parameter_validator
+from flask_parameter_validator import Body, File, Form, Path, parameter_validator
 from tests.conftest import Item, User, match_pydantic_error_url
 
 app = Flask(__name__)
@@ -17,6 +16,13 @@ client = app.test_client()
 @parameter_validator
 def create_item(item: Item):
     return jsonify(item.model_dump())
+
+
+@app.put("/items/<item_id>")
+@parameter_validator
+def update_item(item_id: int = Path(), item: Item = Body(embed=True)):
+    results = {"item_id": item_id, "item": item.model_dump()}
+    return results
 
 
 def test_body_float():
@@ -254,7 +260,51 @@ def test_wrong_headers():
     }
 
 
-# def test_other_exceptions():
-#     with patch("json.loads", side_effect=Exception):
-#         response = client.post("/items/", json={"test": "test2"})
-#         assert response.status_code == 400, response.text
+def test_items_5():
+    response = client.put("/items/5", json={"item": {"name": "Foo", "price": 3.0}})
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "item_id": 5,
+        "item": {"name": "Foo", "price": 3.0, "description": None, "tax": None},
+    }
+
+
+def test_items_6():
+    response = client.put(
+        "/items/6",
+        json={
+            "item": {
+                "name": "Bar",
+                "price": 0.2,
+                "description": "Some bar",
+                "tax": "5.4",
+            }
+        },
+    )
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "item_id": 6,
+        "item": {
+            "name": "Bar",
+            "price": 0.2,
+            "description": "Some bar",
+            "tax": 5.4,
+        },
+    }
+
+
+def test_invalid_price():
+    response = client.put("/items/5", json={"item": {"name": "Foo", "price": -3.0}})
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "greater_than",
+                "loc": ["body", "item", "price"],
+                "msg": "Input should be greater than 0",
+                "input": -3.0,
+                "ctx": {"gt": 0.0},
+                "url": match_pydantic_error_url("greater_than"),
+            }
+        ]
+    }
