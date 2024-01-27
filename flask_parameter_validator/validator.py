@@ -18,6 +18,7 @@ import werkzeug.exceptions
 from flask import Response, request
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
+from werkzeug.datastructures import Headers
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.dependant import Dependant
@@ -98,7 +99,7 @@ class ParameterValidator:
         solved_params: Dict[str, BaseModel] = {}
         errors: List[Union[Dict[str, Any], ErrorDetails]] = []
 
-        headers: Dict[str, Any] = request.headers
+        headers: Headers = request.headers
         _params, _errors = self.dependant.solve_header_params(headers)
         errors.extend(_errors)
         solved_params.update(_params)

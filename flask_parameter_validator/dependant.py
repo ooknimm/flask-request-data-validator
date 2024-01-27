@@ -1,8 +1,22 @@
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from collections import deque
+from typing import (
+    Any,
+    Deque,
+    Dict,
+    FrozenSet,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails
+from werkzeug.datastructures import Headers
 
 from flask_parameter_validator._params import (
     Body,
@@ -111,7 +125,7 @@ class Dependant:
 
     def _solve_params(
         self,
-        received_params: Dict[str, Any],
+        received_params: Union[Dict[str, Any], Headers],
         params: Dict[str, ParamType],
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
@@ -121,7 +135,11 @@ class Dependant:
             if isinstance(param, Header):
                 _param_name = param_name.replace("_", "-")
             loc: Tuple[str, ...] = (param.__class__.__qualname__.lower(), _param_name)
-            _received_param = received_params.get(param_name)
+            _received_param: Any
+            if isinstance(received_params, (Headers)) and param.annotation_is_sequence:
+                _received_param = received_params.getlist(_param_name)
+            else:
+                _received_param = received_params.get(_param_name)
             if not _received_param:
                 if param.default is inspect.Signature.empty:
                     error = ValidationError.from_exception_data(
@@ -148,7 +166,7 @@ class Dependant:
         return solved, errors
 
     def solve_header_params(
-        self, headers: Dict[str, Any]
+        self, headers: Headers
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(headers, self.header_params)
 

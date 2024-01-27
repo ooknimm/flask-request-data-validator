@@ -11,9 +11,13 @@ from typing import (
     Union,
 )
 
-from pydantic import ConfigDict, TypeAdapter
+from pydantic import TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
+
+from flask_parameter_validator.utils import (
+    annotation_is_sequence as _annotation_is_sequence,
+)
 
 IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any]]
 
@@ -108,6 +112,14 @@ class FieldAdapter:
     @property
     def alias(self) -> Optional[str]:
         return self.field_info.alias
+
+    @property
+    def annotation(self) -> Optional[Any]:
+        return self.field_info.annotation
+
+    @property
+    def annotation_is_sequence(self) -> bool:
+        return _annotation_is_sequence(self.field_info.annotation)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({(self.field_info.default)})"
