@@ -1,15 +1,23 @@
-import io
-from typing import Annotated, Optional
+from typing import Union
 
 import pytest
 from flask import Flask, jsonify
-from werkzeug.datastructures import FileStorage
+from pydantic import BaseModel, Field
 
-from flask_parameter_validator import Body, File, Form, Path, parameter_validator
-from tests.conftest import Item, User, match_pydantic_error_url
+from flask_parameter_validator import Body, Path, parameter_validator
+from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
+
+
+class Item(BaseModel):
+    name: str
+    description: Union[str, None] = Field(
+        default=None, title="The description of the item", max_length=300
+    )
+    price: float = Field(gt=0, description="The price must be greater than zero")
+    tax: Union[float, None] = None
 
 
 @app.post("/items/")
@@ -25,124 +33,120 @@ def update_item(item_id: int = Path(), item: Item = Body(embed=True)):
     return results
 
 
-def test_body_float():
-    response = client.post("/items/", json={"name": "Foo", "price": 50.5})
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "name": "Foo",
-        "price": 50.5,
-        "description": None,
-        "tax": None,
-    }
-
-
-def test_post_with_str_float():
-    response = client.post("/items/", json={"name": "Foo", "price": "50.5"})
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "name": "Foo",
-        "price": 50.5,
-        "description": None,
-        "tax": None,
-    }
-
-
-def test_post_with_str_float_description():
-    response = client.post(
-        "/items/", json={"name": "Foo", "price": "50.5", "description": "Some Foo"}
-    )
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "name": "Foo",
-        "price": 50.5,
-        "description": "Some Foo",
-        "tax": None,
-    }
-
-
-def test_post_with_str_float_description_tax():
-    response = client.post(
-        "/items/",
-        json={"name": "Foo", "price": "50.5", "description": "Some Foo", "tax": 0.3},
-    )
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "name": "Foo",
-        "price": 50.5,
-        "description": "Some Foo",
-        "tax": 0.3,
-    }
-
-
-def test_post_with_only_name():
-    response = client.post("/items/", json={"name": "Foo"})
-    assert response.status_code == 422
-    assert response.get_json() == {
-        "detail": [
+@pytest.mark.parametrize(
+    "title,data,expected_status,expected_response",
+    [
+        (
+            "body float",
+            {"name": "Foo", "price": 50.5},
+            200,
+            {"name": "Foo", "price": 50.5, "description": None, "tax": None},
+        ),
+        (
+            "post_with_str_float",
+            {"name": "Foo", "price": "50.5"},
+            200,
+            {"name": "Foo", "price": 50.5, "description": None, "tax": None},
+        ),
+        (
+            "post_with_str_float_description",
+            {"name": "Foo", "price": "50.5", "description": "Some Foo"},
+            200,
             {
-                "type": "missing",
-                "loc": ["body", "price"],
-                "msg": "Field required",
-                "input": {"name": "Foo"},
-                "url": match_pydantic_error_url("missing"),
-            }
-        ]
-    }
-
-
-def test_post_with_only_name_price():
-    response = client.post("/items/", json={"name": "Foo", "price": "twenty"})
-    assert response.status_code == 422
-    assert response.get_json() == {
-        "detail": [
-            {
-                "type": "float_parsing",
-                "loc": ["body", "price"],
-                "msg": "Input should be a valid number, unable to parse string as a number",
-                "input": "twenty",
-                "url": match_pydantic_error_url("float_parsing"),
-            }
-        ]
-    }
-
-
-def test_post_with_no_data():
-    response = client.post("/items/", json={})
-    assert response.status_code == 422
-    assert response.get_json() == {
-        "detail": [
-            {
-                "type": "missing",
-                "loc": ["body", "name"],
-                "msg": "Field required",
-                "input": {},
-                "url": match_pydantic_error_url("missing"),
+                "name": "Foo",
+                "price": 50.5,
+                "description": "Some Foo",
+                "tax": None,
             },
+        ),
+        (
+            "post_with_str_float_description_tax",
+            {"name": "Foo", "price": "50.5", "description": "Some Foo", "tax": 0.3},
+            200,
             {
-                "type": "missing",
-                "loc": ["body", "price"],
-                "msg": "Field required",
-                "input": {},
-                "url": match_pydantic_error_url("missing"),
+                "name": "Foo",
+                "price": 50.5,
+                "description": "Some Foo",
+                "tax": 0.3,
             },
-        ]
-    }
-
-
-def test_post_with_none():
-    response = client.post("/items/", json=None)
-    assert response.status_code == 422
-    assert response.get_json() == {
-        "detail": [
+        ),
+        (
+            "post_with_only_name",
+            {"name": "Foo"},
+            422,
             {
-                "type": "missing",
-                "loc": ["body"],
-                "msg": "Field required",
-                "input": None,
-                "url": match_pydantic_error_url("missing"),
-            }
-        ]
-    }
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "price"],
+                        "msg": "Field required",
+                        "input": {"name": "Foo"},
+                        "url": match_pydantic_error_url("missing"),
+                    }
+                ]
+            },
+        ),
+        (
+            "post_with_only_name_price",
+            {"name": "Foo", "price": "twenty"},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "float_parsing",
+                        "loc": ["body", "price"],
+                        "msg": "Input should be a valid number, unable to parse string as a number",
+                        "input": "twenty",
+                        "url": match_pydantic_error_url("float_parsing"),
+                    }
+                ]
+            },
+        ),
+        (
+            "post_with_no_data",
+            {},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "name"],
+                        "msg": "Field required",
+                        "input": {},
+                        "url": match_pydantic_error_url("missing"),
+                    },
+                    {
+                        "type": "missing",
+                        "loc": ["body", "price"],
+                        "msg": "Field required",
+                        "input": {},
+                        "url": match_pydantic_error_url("missing"),
+                    },
+                ]
+            },
+        ),
+        (
+            "post_with_none",
+            None,
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_create_item(title, data, expected_status, expected_response):
+    response = client.post("/items/", json=data)
+    assert response.status_code == expected_status
+    assert response.get_json() == expected_response
 
 
 def test_post_broken_body():
@@ -260,51 +264,62 @@ def test_wrong_headers():
     }
 
 
-def test_items_5():
-    response = client.put("/items/5", json={"item": {"name": "Foo", "price": 3.0}})
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "item_id": 5,
-        "item": {"name": "Foo", "price": 3.0, "description": None, "tax": None},
-    }
-
-
-def test_items_6():
-    response = client.put(
-        "/items/6",
-        json={
-            "item": {
-                "name": "Bar",
-                "price": 0.2,
-                "description": "Some bar",
-                "tax": "5.4",
-            }
-        },
-    )
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "item_id": 6,
-        "item": {
-            "name": "Bar",
-            "price": 0.2,
-            "description": "Some bar",
-            "tax": 5.4,
-        },
-    }
-
-
-def test_invalid_price():
-    response = client.put("/items/5", json={"item": {"name": "Foo", "price": -3.0}})
-    assert response.status_code == 422
-    assert response.get_json() == {
-        "detail": [
+@pytest.mark.parametrize(
+    "title,path,data,expected_status,expected_response",
+    [
+        (
+            "success",
+            "/items/5",
+            {"item": {"name": "Foo", "price": 3.0}},
+            200,
             {
-                "type": "greater_than",
-                "loc": ["body", "item", "price"],
-                "msg": "Input should be greater than 0",
-                "input": -3.0,
-                "ctx": {"gt": 0.0},
-                "url": match_pydantic_error_url("greater_than"),
-            }
-        ]
-    }
+                "item_id": 5,
+                "item": {"name": "Foo", "price": 3.0, "description": None, "tax": None},
+            },
+        ),
+        (
+            "success",
+            "/items/6",
+            {
+                "item": {
+                    "name": "Bar",
+                    "price": 0.2,
+                    "description": "Some bar",
+                    "tax": "5.4",
+                }
+            },
+            200,
+            {
+                "item_id": 6,
+                "item": {
+                    "name": "Bar",
+                    "price": 0.2,
+                    "description": "Some bar",
+                    "tax": 5.4,
+                },
+            },
+        ),
+        (
+            "invalid_price",
+            "/items/5",
+            {"item": {"name": "Foo", "price": -3.0}},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "greater_than",
+                        "loc": ["body", "item", "price"],
+                        "msg": "Input should be greater than 0",
+                        "input": -3.0,
+                        "ctx": {"gt": 0.0},
+                        "url": match_pydantic_error_url("greater_than"),
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_update_item(title, path, data, expected_status, expected_response):
+    response = client.put(path, json=data)
+    assert response.status_code == expected_status
+    assert response.get_json() == expected_response
