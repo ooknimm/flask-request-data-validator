@@ -36,7 +36,9 @@ class ParameterValidator:
     ):
         _field_info = field.field_info
         _field_info.title = param_name
-        if _field_info.default == PydanticUndefined:
+        if _field_info.default == PydanticUndefined and not isinstance(
+            param.default, _params.FieldAdapter
+        ):
             _field_info.default = param.default
         _field_info.annotation = param.annotation
         field.field_info = _field_info

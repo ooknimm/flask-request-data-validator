@@ -15,7 +15,7 @@ from typing import (
 )
 
 from pydantic import BaseModel, ValidationError
-from pydantic_core import ErrorDetails
+from pydantic_core import ErrorDetails, PydanticUndefined
 from werkzeug.datastructures import Headers
 
 from flask_parameter_validator._params import (
@@ -97,9 +97,7 @@ class Dependant:
                     errors.append(error)
                     continue
             if value is None:
-                if param.default is inspect.Signature.empty or isinstance(
-                    param.default, FieldAdapter
-                ):
+                if param.default in (inspect.Signature.empty, PydanticUndefined):
                     error = ValidationError.from_exception_data(
                         "Field required",
                         [
@@ -141,7 +139,7 @@ class Dependant:
             else:
                 _received_param = received_params.get(_param_name)
             if not _received_param:
-                if param.default is inspect.Signature.empty:
+                if param.default in (inspect.Signature.empty, PydanticUndefined):
                     error = ValidationError.from_exception_data(
                         "Field required",
                         [
@@ -153,7 +151,7 @@ class Dependant:
                         ],
                     ).errors()[0]
                     errors.append(error)
-                    break
+                    continue
                 else:
                     solved[param_name] = param.default
                     continue
