@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Annotated
 
 import pytest
@@ -20,6 +21,30 @@ def put_user(user_id: Annotated[int, Path()], user: User):
 @parameter_validator
 def greater_than(user_id: Annotated[int, Path(gt=10)]):
     return jsonify({"user_id": user_id})
+
+
+@app.get("/files/<path:file_path>")
+@parameter_validator
+def read_file(file_path: str = Path()):
+    return {"file_path": file_path}
+
+
+class ItemName(str, Enum):
+    foo = "foo"
+    bar = "bar"
+    baz = "baz"
+
+
+@app.get("/items/<item_name>")
+@parameter_validator
+def get_model(item_name: ItemName = Path()):
+    if item_name is ItemName.foo:
+        return {"item_name": item_name, "message": "item is foo"}
+
+    if item_name.value == "bar":
+        return {"item_name": item_name, "message": "item is bar"}
+
+    return {"item_name": item_name, "message": "item is baz"}
 
 
 @pytest.mark.parametrize(
@@ -85,5 +110,52 @@ def test_path_params(path, body, expected_status, expected_response):
 )
 def test_greater_than_path_params(path, body, expected_status, expected_response):
     response = client.post(path, json=body)
+    assert response.status_code == expected_status
+    assert response.get_json() == expected_response
+
+
+def test_file_path():
+    response = client.get("/files/home/me/myfile.txt")
+    assert response.status_code == 200, response.text
+    assert response.get_json() == {"file_path": "home/me/myfile.txt"}
+
+
+@pytest.mark.parametrize(
+    "path,expected_status,expected_response",
+    [
+        (
+            "/items/foo",
+            200,
+            {"item_name": "foo", "message": "item is foo"},
+        ),
+        (
+            "/items/bar",
+            200,
+            {"item_name": "bar", "message": "item is bar"},
+        ),
+        (
+            "/items/baz",
+            200,
+            {"item_name": "baz", "message": "item is baz"},
+        ),
+        (
+            "/items/qux",
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "enum",
+                        "loc": ["path", "item_name"],
+                        "msg": "Input should be 'foo','bar' or 'baz'",
+                        "input": "qux",
+                        "ctx": {"expected": "'foo','bar' or 'baz'"},
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_get_enums(path, expected_status, expected_response):
+    response = client.get(path)
     assert response.status_code == expected_status
     assert response.get_json() == expected_response
