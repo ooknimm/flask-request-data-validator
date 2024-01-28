@@ -17,6 +17,7 @@ def Path(
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
+    pattern: Optional[str] = None,
     **extra: Any,
 ) -> Any:
     return _params.Path(
@@ -30,6 +31,7 @@ def Path(
         le=le,
         min_length=min_length,
         max_length=max_length,
+        pattern=pattern,
         **extra,
     )
 
@@ -46,6 +48,7 @@ def Header(
     le: Optional[float] = None,
     min_length: Optional[int] = None,
     max_length: Optional[int] = None,
+    pattern: Optional[str] = None,
     **extra: Any,
 ) -> Any:
     return _params.Header(
@@ -59,6 +62,7 @@ def Header(
         le=le,
         min_length=min_length,
         max_length=max_length,
+        pattern=pattern,
         **extra,
     )
 

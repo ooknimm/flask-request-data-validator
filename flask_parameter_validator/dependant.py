@@ -16,7 +16,7 @@ from typing import (
 
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
-from werkzeug.datastructures import Headers
+from werkzeug.datastructures import Headers, MultiDict
 
 from flask_parameter_validator._params import (
     Body,
@@ -123,7 +123,7 @@ class Dependant:
 
     def _solve_params(
         self,
-        received_params: Union[Dict[str, Any], Headers],
+        received_params: Union[Dict[str, Any], Headers, MultiDict[str, Any]],
         params: Dict[str, ParamType],
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         solved: Dict[str, BaseModel] = {}
@@ -134,7 +134,10 @@ class Dependant:
                 _param_name = param_name.replace("_", "-")
             loc: Tuple[str, ...] = (param.__class__.__qualname__.lower(), _param_name)
             _received_param: Any
-            if isinstance(received_params, (Headers)) and param.annotation_is_sequence:
+            if (
+                isinstance(received_params, (Headers, MultiDict))
+                and param.annotation_is_sequence
+            ):
                 _received_param = received_params.getlist(_param_name)
             else:
                 _received_param = received_params.get(_param_name)
@@ -174,7 +177,7 @@ class Dependant:
         return self._solve_params(path, self.path_params)
 
     def solve_query_params(
-        self, query: Dict[Any, Any]
+        self, query: MultiDict[str, Any]
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(query, self.query_params)
 

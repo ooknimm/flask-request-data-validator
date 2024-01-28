@@ -18,7 +18,7 @@ import werkzeug.exceptions
 from flask import Response, request
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
-from werkzeug.datastructures import Headers
+from werkzeug.datastructures import Headers, MultiDict
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.dependant import Dependant
@@ -111,7 +111,7 @@ class ParameterValidator:
         errors.extend(_errors)
         solved_params.update(_params)
 
-        query: Dict[str, str] = request.args or {}
+        query: MultiDict[str, Any] = request.args or MultiDict()
         _params, _errors = self.dependant.solve_query_params(query)
         errors.extend(_errors)
         solved_params.update(_params)
