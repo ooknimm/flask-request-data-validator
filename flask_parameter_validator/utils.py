@@ -102,3 +102,29 @@ def annotation_is_sequence(annotation: Any) -> bool:
     return __any_of_annotation_is_sequence(annotation) and all(
         __annotation_is_scalar(arg) for arg in get_args(annotation)
     )
+
+
+def is_file_or_nonable_file_annotation(annotation: Any) -> bool:
+    if lenient_issubclass(annotation, FileStorage):
+        return True
+    origin = get_origin(annotation)
+    if origin is Union or origin is UnionType:
+        for arg in get_args(annotation):
+            if lenient_issubclass(arg, FileStorage):
+                return True
+    return False
+
+
+def annotation_is_file_sequence(annotation: Any) -> bool:
+    origin = get_origin(annotation)
+    if origin is Union or origin is UnionType:
+        at_least_one = False
+        for arg in get_args(annotation):
+            if annotation_is_file_sequence(arg):
+                at_least_one = True
+                continue
+        return at_least_one
+    return __any_of_annotation_is_sequence(annotation) and all(
+        is_file_or_nonable_file_annotation(sub_annotation)
+        for sub_annotation in get_args(annotation)
+    )

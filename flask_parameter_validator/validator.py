@@ -18,7 +18,7 @@ import werkzeug.exceptions
 from flask import Response, request
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
-from werkzeug.datastructures import Headers, MultiDict
+from werkzeug.datastructures import FileStorage, Headers, MultiDict
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.dependant import Dependant
@@ -50,7 +50,10 @@ class ParameterValidator:
         param: inspect.Parameter,
         field: _params.FieldAdapter,
     ) -> None:
-        if isinstance(field, _params.Body) or isinstance(field, _params.Form):
+        if isinstance(field, _params.File):
+            self._update_field_info(field, param_name, param)
+            dependant.file_params[param_name] = field
+        elif isinstance(field, _params.Body) or isinstance(field, _params.Form):
             self._update_field_info(field, param_name, param)
             dependant.body_params[param_name] = field
         elif isinstance(field, _params.Path):
@@ -62,9 +65,6 @@ class ParameterValidator:
         elif isinstance(field, _params.Header):
             self._update_field_info(field, param_name, param)
             dependant.header_params[param_name] = field
-        elif isinstance(field, _params.File):
-            self._update_field_info(field, param_name, param)
-            dependant.file_params[param_name] = field
 
     def _get_dependant(self) -> Dependant:
         dependant = Dependant()
@@ -116,7 +116,7 @@ class ParameterValidator:
         errors.extend(_errors)
         solved_params.update(_params)
 
-        files: Dict[str, Any] = request.files or {}
+        files: MultiDict[str, FileStorage] = request.files or MultiDict()
         _params, _errors = self.dependant.solve_file_params(files)
         errors.extend(_errors)
         solved_params.update(_params)

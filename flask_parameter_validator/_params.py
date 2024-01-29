@@ -15,6 +15,7 @@ from pydantic import TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 
+from flask_parameter_validator.utils import annotation_is_file_sequence
 from flask_parameter_validator.utils import (
     annotation_is_sequence as _annotation_is_sequence,
 )
@@ -116,6 +117,10 @@ class FieldAdapter:
     @property
     def annotation(self) -> Optional[Any]:
         return self.field_info.annotation
+
+    @property
+    def loc(self) -> str:
+        return self.__class__.__qualname__.lower()
 
     @property
     def annotation_is_sequence(self) -> bool:
@@ -229,6 +234,10 @@ class Body(FieldAdapter):
             **extra,
         )
 
+    @property
+    def loc(self) -> str:
+        return "body"
+
 
 class Form(Body):
     def __init__(
@@ -298,6 +307,10 @@ class File(Form):
             max_length=max_length,
             **extra,
         )
+
+    @property
+    def annotation_is_sequence(self) -> bool:
+        return annotation_is_file_sequence(self.field_info.annotation)
 
     def _get_type_adapter(self) -> TypeAdapter[Any]:
         return TypeAdapter(Annotated[self.field_info.annotation, self.field_info], config={"arbitrary_types_allowed": True})  # type: ignore

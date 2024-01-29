@@ -1,11 +1,12 @@
 import io
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 
 import pytest
 from flask import Flask, jsonify
-from werkzeug.datastructures import FileStorage
+from werkzeug.datastructures import FileStorage, MultiDict
 
 from flask_parameter_validator import File, parameter_validator
+from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)
 client = app.test_client()
@@ -25,6 +26,16 @@ def post_file(
     return jsonify(result)
 
 
+@app.post("/files")
+@parameter_validator
+def post_files(
+    files: List[FileStorage] = File(),
+):
+    file_contents = [file.stream.read().decode("utf-8") for file in files]
+    result = {"files": file_contents}
+    return jsonify(result)
+
+
 @pytest.mark.parametrize(
     "path,files,expected_status,expected_response",
     [
@@ -38,6 +49,65 @@ def post_file(
             {"file1": "foo", "file2": "bar"},
         ),
         ("/file", {"file1": (io.BytesIO(b"foo"), "file1")}, 200, {"file1": "foo"}),
+        (
+            "/file",
+            {},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "file1"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    }
+                ]
+            },
+        ),
+        (
+            "/files",
+            MultiDict(
+                [
+                    ("files", (io.BytesIO(b"foo"), "file1")),
+                    ("files", (io.BytesIO(b"bar"), "file2")),
+                ]
+            ),
+            200,
+            {"files": ["foo", "bar"]},
+        ),
+        (
+            "/files",
+            MultiDict(
+                [
+                    ("files", (io.BytesIO(b"foo"), "file1")),
+                ]
+            ),
+            200,
+            {"files": ["foo"]},
+        ),
+        (
+            "/files",
+            {"files": (io.BytesIO(b"foo"), "file1")},
+            200,
+            {"files": ["foo"]},
+        ),
+        (
+            "/files",
+            {},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "files"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    }
+                ]
+            },
+        ),
     ],
 )
 def test_sned_file(path, files, expected_status, expected_response):

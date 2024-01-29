@@ -1,10 +1,12 @@
+import io
 from typing import Annotated, Dict, Optional, Union
 
 import pytest
 from flask import Flask, jsonify
 from pydantic import BaseModel
+from werkzeug.datastructures import FileStorage
 
-from flask_parameter_validator import Body, Path, Query, parameter_validator
+from flask_parameter_validator import Body, File, Form, Path, Query, parameter_validator
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)
@@ -63,6 +65,15 @@ def update_item_v2(
 @parameter_validator
 def create_index_weights(weights: Dict[int, float]):
     return weights
+
+
+@app.post("/form_file")
+@parameter_validator
+def form_files(file: FileStorage = File(), token: str = Form()):
+    return {
+        "token": token,
+        "file": file.stream.read().decode("utf-8"),
+    }
 
 
 @pytest.mark.parametrize(
@@ -211,5 +222,99 @@ def test_post_invalid_body():
                 "input": "foo",
                 "url": match_pydantic_error_url("int_parsing"),
             }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "body,expected_status,expected_response",
+    [
+        (
+            {"token": "foo", "file": (io.BytesIO(b"bar"), "file1")},
+            200,
+            {"token": "foo", "file": "bar"},
+        ),
+        (
+            {},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "file"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    },
+                    {
+                        "type": "missing",
+                        "loc": ["body", "token"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    },
+                ]
+            },
+        ),
+        (
+            {"token": "foo"},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "file"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    },
+                ]
+            },
+        ),
+        (
+            {"file": (io.BytesIO(b"bar"), "file1")},
+            422,
+            {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": ["body", "token"],
+                        "msg": "Field required",
+                        "input": None,
+                        "url": match_pydantic_error_url("missing"),
+                    }
+                ]
+            },
+        ),
+    ],
+)
+def test_form_file(body, expected_status, expected_response):
+    response = client.post("/form_file", data=body, content_type="multipart/form-data")
+    assert response.status_code == expected_status, response.text
+    assert response.get_json() == expected_response
+
+
+def test_form_file_json():
+    response = client.post(
+        "/form_file",
+        json={"file": "Foo", "token": "Bar"},
+    )
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "detail": [
+            {
+                "type": "missing",
+                "loc": ["body", "file"],
+                "msg": "Field required",
+                "input": None,
+                "url": match_pydantic_error_url("missing"),
+            },
+            {
+                "type": "missing",
+                "loc": ["body", "token"],
+                "msg": "Field required",
+                "input": None,
+                "url": match_pydantic_error_url("missing"),
+            },
         ]
     }

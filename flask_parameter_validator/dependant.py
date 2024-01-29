@@ -16,7 +16,7 @@ from typing import (
 
 from pydantic import BaseModel, ValidationError
 from pydantic_core import ErrorDetails, PydanticUndefined
-from werkzeug.datastructures import Headers, MultiDict
+from werkzeug.datastructures import FileStorage, Headers, MultiDict
 
 from flask_parameter_validator._params import (
     Body,
@@ -132,7 +132,7 @@ class Dependant:
             _param_name = param_name
             if isinstance(param, Header):
                 _param_name = param_name.replace("_", "-")
-            loc: Tuple[str, ...] = (param.__class__.__qualname__.lower(), _param_name)
+            loc: Tuple[str, ...] = (param.loc, _param_name)
             _received_param: Any
             if (
                 isinstance(received_params, (Headers, MultiDict))
@@ -182,6 +182,6 @@ class Dependant:
         return self._solve_params(query, self.query_params)
 
     def solve_file_params(
-        self, files: Dict[str, Any]
+        self, files: MultiDict[str, FileStorage]
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(files, self.file_params)

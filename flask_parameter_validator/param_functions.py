@@ -132,7 +132,6 @@ def Body(
 def Form(
     default: Any = PydanticUndefined,
     *,
-    embed: bool = False,
     media_type: str = "application/x-www-form-urlencoded",
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -147,7 +146,7 @@ def Form(
 ) -> Any:
     return _params.Form(
         default,
-        embed=embed,
+        embed=True,
         media_type=media_type,
         alias=alias,
         title=title,
@@ -165,7 +164,6 @@ def Form(
 def File(
     default: Any = PydanticUndefined,
     *,
-    embed: bool = False,
     media_type: str = "multipart/form-data",
     alias: Optional[str] = None,
     title: Optional[str] = None,
@@ -180,7 +178,7 @@ def File(
 ) -> Any:
     return _params.File(
         default,
-        embed=embed,
+        embed=True,
         media_type=media_type,
         alias=alias,
         title=title,
