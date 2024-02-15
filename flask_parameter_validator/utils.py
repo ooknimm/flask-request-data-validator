@@ -3,6 +3,7 @@ import types
 from collections import deque
 from dataclasses import is_dataclass
 from typing import (
+    Annotated,
     Any,
     Deque,
     FrozenSet,
@@ -89,6 +90,8 @@ def __any_of_annotation_is_sequence(annotation) -> bool:
 
 
 def annotation_is_sequence(annotation: Any) -> bool:
+    if get_origin(annotation) is Annotated:
+        annotation = get_args(annotation)[0]
     origin = get_origin(annotation)
     if __is_union_type(origin):
         at_least_one_sequence = False
@@ -116,6 +119,8 @@ def is_file_or_nonable_file_annotation(annotation: Any) -> bool:
 
 
 def annotation_is_file_sequence(annotation: Any) -> bool:
+    if get_origin(annotation) is Annotated:
+        annotation = get_args(annotation)[0]
     origin = get_origin(annotation)
     if origin is Union or origin is UnionType:
         at_least_one = False
