@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Annotated, List, Optional, Union
 
 import pytest
 from flask import Flask, jsonify
@@ -12,7 +12,7 @@ client = app.test_client()
 
 @app.post("/users")
 @parameter_validator
-def create_user(user: User, q: Optional[str] = Query(default=None)):
+def create_user(user: User, q: Annotated[Optional[str], Query()] = None):
     response = user.model_dump()
     if q:
         response.update({"q": q})
@@ -21,25 +21,25 @@ def create_user(user: User, q: Optional[str] = Query(default=None)):
 
 @app.get("/multi_q")
 @parameter_validator
-def multi_q(q: Union[List[str], None] = Query(default=None)):
+def multi_q(q: Annotated[Union[List[str], None], Query(default=None)]):
     return jsonify({"q": q})
 
 
 @app.get("/multi_q_default")
 @parameter_validator
-def multi_q_default(q: List[str] = Query(default=["foo", "bar"])):
+def multi_q_default(q: Annotated[List[str], Query(default=["foo", "bar"])]):
     return jsonify({"q": q})
 
 
 @app.get("/multi_q_default2")
 @parameter_validator
-def multi_q_default2(q: List[str] = Query(default=[])):
+def multi_q_default2(q: Annotated[List[str], Query(default=[])]):
     return jsonify({"q": q})
 
 
 @app.post("/greater_than")
 @parameter_validator
-def greater_than(q: Optional[int] = Query(gt=40, default=None)):
+def greater_than(q: Annotated[Optional[int], Query(gt=40)] = None):
     return jsonify({"q": q})
 
 
@@ -49,7 +49,7 @@ def read_user_item(
     item_id: str = Path(),
     needy: str = Query(),
     skip: int = Query(default=0),
-    limit: Optional[int] = Query(default=None),
+    limit: Annotated[Optional[int], Query()] = None,
 ):
     item = {"item_id": item_id, "needy": needy, "skip": skip, "limit": limit}
     return item

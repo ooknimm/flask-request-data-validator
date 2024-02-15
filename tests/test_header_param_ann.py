@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 import pytest
 from flask import Flask
@@ -12,19 +12,19 @@ client = app.test_client()
 
 @app.get("/nullable_header")
 @parameter_validator
-def nullable_header(x_token: Optional[str] = Header(default=None)):
+def nullable_header(x_token: Annotated[Optional[str], Header(default=None)]):
     return {"x-token": x_token}
 
 
 @app.get("/required_header")
 @parameter_validator
-def required_header(x_token: str = Header(max_length=5)):
+def required_header(x_token: Annotated[str, Header(max_length=5)]):
     return {"x-token": x_token}
 
 
 @app.get("/list_header")
 @parameter_validator
-def list_header(x_token: Optional[List[str]] = Header(default=None)):
+def list_header(x_token: Annotated[Optional[List[str]], Header(default=None)]):
     return {"x-token": x_token}
 
 

@@ -1,5 +1,5 @@
 import io
-from typing import Dict, Optional, Union
+from typing import Annotated, Dict, Optional, Union
 
 import pytest
 from flask import Flask
@@ -30,10 +30,10 @@ class User(BaseModel):
 def update_item(
     *,
     user: Optional[User] = None,
-    item_id: int = Path(title="The ID of the item to get", ge=0, le=1000),
-    q: Optional[str] = Query(default=None),
+    item_id: Annotated[int, Path(title="The ID of the item to get", ge=0, le=1000)],
+    q: Annotated[Optional[str], Query(default=None)],
     item: Optional[Item] = None,
-    importance: Optional[int] = Body(default=None),
+    importance: Annotated[Optional[int], Body()] = None,
 ):
     results: Dict = {"item_id": item_id}
     if q:
@@ -50,7 +50,11 @@ def update_item(
 @app.put("/v2/items/<item_id>")
 @parameter_validator
 def update_item_v2(
-    *, item_id: int = Path(), item: Item, user: User, importance: int = Body()
+    *,
+    item_id: Annotated[int, Path()],
+    item: Item,
+    user: User,
+    importance: Annotated[int, Body()],
 ):
     results = {
         "item_id": item_id,
@@ -69,7 +73,7 @@ def create_index_weights(weights: Dict[int, float]):
 
 @app.post("/form_file")
 @parameter_validator
-def form_files(file: FileStorage = File(), token: str = Form()):
+def form_files(file: Annotated[FileStorage, File()], token: Annotated[str, Form()]):
     return {
         "token": token,
         "file": file.stream.read().decode("utf-8"),

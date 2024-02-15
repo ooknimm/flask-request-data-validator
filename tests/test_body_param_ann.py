@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Annotated, Union
 
 import pytest
 from flask import Flask, jsonify
@@ -28,7 +28,9 @@ def create_item(item: Item):
 
 @app.put("/items/<item_id>")
 @parameter_validator
-def update_item(item_id: int = Path(), item: Item = Body(embed=True)):
+def update_item(
+    item_id: Annotated[int, Path()], item: Annotated[Item, Body(embed=True)]
+):
     results = {"item_id": item_id, "item": item.model_dump()}
     return results
 

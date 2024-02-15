@@ -15,8 +15,8 @@ client = app.test_client()
 @app.post("/file")
 @parameter_validator
 def post_file(
-    file1: FileStorage = File(),
-    file2: Optional[FileStorage] = File(default=None),
+    file1: Annotated[FileStorage, File()],
+    file2: Annotated[Optional[FileStorage], File()] = None,
 ):
     file1_content = file1.stream.read().decode("utf-8")
     result = {"file1": file1_content}
@@ -29,7 +29,7 @@ def post_file(
 @app.post("/files")
 @parameter_validator
 def post_files(
-    files: List[FileStorage] = File(),
+    files: Annotated[List[FileStorage], File()],
 ):
     file_contents = [file.stream.read().decode("utf-8") for file in files]
     result = {"files": file_contents}

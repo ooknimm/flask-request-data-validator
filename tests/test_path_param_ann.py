@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Annotated
 
 import pytest
 from flask import Flask, jsonify
@@ -12,19 +13,19 @@ client = app.test_client()
 
 @app.put("/users/<user_id>")
 @parameter_validator
-def put_user(*, user_id: int = Path(), user: User):
+def put_user(user_id: Annotated[int, Path()], user: User):
     return jsonify({"user_id": user_id, **user.model_dump()})
 
 
 @app.post("/greater_than/<user_id>")
 @parameter_validator
-def greater_than(user_id: int = Path(gt=10)):
+def greater_than(user_id: Annotated[int, Path(gt=10)]):
     return jsonify({"user_id": user_id})
 
 
 @app.get("/files/<path:file_path>")
 @parameter_validator
-def read_file(file_path: str = Path()):
+def read_file(file_path: Annotated[str, Path()]):
     return {"file_path": file_path}
 
 
