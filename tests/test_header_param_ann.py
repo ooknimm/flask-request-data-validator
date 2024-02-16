@@ -3,7 +3,7 @@ from typing import Annotated, List, Optional
 import pytest
 from flask import Flask
 
-from flask_parameter_validator import Header, parameter_validator
+from flask_request_data_validator import Header, parameter_validator
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)

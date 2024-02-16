@@ -3,8 +3,8 @@ from typing import Annotated
 import pytest
 from flask import Flask
 
-from flask_parameter_validator import parameter_validator
-from flask_parameter_validator.param_functions import Form
+from flask_request_data_validator import parameter_validator
+from flask_request_data_validator.param_functions import Form
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)

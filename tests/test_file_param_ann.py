@@ -5,7 +5,7 @@ import pytest
 from flask import Flask, jsonify
 from werkzeug.datastructures import FileStorage, MultiDict
 
-from flask_parameter_validator import File, parameter_validator
+from flask_request_data_validator import File, parameter_validator
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)

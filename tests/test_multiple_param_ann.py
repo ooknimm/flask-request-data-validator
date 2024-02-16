@@ -6,7 +6,14 @@ from flask import Flask
 from pydantic import BaseModel
 from werkzeug.datastructures import FileStorage
 
-from flask_parameter_validator import Body, File, Form, Path, Query, parameter_validator
+from flask_request_data_validator import (
+    Body,
+    File,
+    Form,
+    Path,
+    Query,
+    parameter_validator,
+)
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)

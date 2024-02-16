@@ -3,7 +3,7 @@ from enum import Enum
 import pytest
 from flask import Flask, jsonify
 
-from flask_parameter_validator import Path, parameter_validator
+from flask_request_data_validator import Path, parameter_validator
 from tests.conftest import User, match_pydantic_error_url
 
 app = Flask(__name__)

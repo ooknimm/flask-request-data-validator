@@ -3,11 +3,11 @@ from typing import Any, Callable, Dict
 
 from flask import Response
 
-from flask_parameter_validator.exceptions import (
+from flask_request_data_validator.exceptions import (
     InternalServerError,
     RequestValidationError,
 )
-from flask_parameter_validator.utils import ResponseEncoder
+from flask_request_data_validator.utils import ResponseEncoder
 
 
 def request_vaildation_error(exc: RequestValidationError):

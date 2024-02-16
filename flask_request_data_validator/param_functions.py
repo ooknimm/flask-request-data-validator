@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from pydantic_core import PydanticUndefined
 
-from flask_parameter_validator import _params
+from flask_request_data_validator import _params
 
 
 def Path(

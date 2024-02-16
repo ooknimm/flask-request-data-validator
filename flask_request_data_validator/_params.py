@@ -15,8 +15,8 @@ from pydantic import TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic_core import ErrorDetails, PydanticUndefined, ValidationError
 
-from flask_parameter_validator.utils import annotation_is_file_sequence
-from flask_parameter_validator.utils import (
+from flask_request_data_validator.utils import annotation_is_file_sequence
+from flask_request_data_validator.utils import (
     annotation_is_sequence as _annotation_is_sequence,
 )
 

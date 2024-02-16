@@ -4,7 +4,7 @@ import pytest
 from flask import Flask, jsonify
 from pydantic import BaseModel, Field
 
-from flask_parameter_validator import Body, Path, parameter_validator
+from flask_request_data_validator import Body, Path, parameter_validator
 from tests.conftest import match_pydantic_error_url
 
 app = Flask(__name__)

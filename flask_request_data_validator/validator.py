@@ -18,10 +18,10 @@ from pydantic import BaseModel
 from pydantic_core import ErrorDetails, PydanticUndefined
 from werkzeug.datastructures import FileStorage, Headers, MultiDict
 
-from flask_parameter_validator import _params
-from flask_parameter_validator.dependant import Dependant
-from flask_parameter_validator.exception_handlers import exception_handler
-from flask_parameter_validator.exceptions import (
+from flask_request_data_validator import _params
+from flask_request_data_validator.dependant import Dependant
+from flask_request_data_validator.exception_handlers import exception_handler
+from flask_request_data_validator.exceptions import (
     InternalServerError,
     RequestValidationError,
 )
