@@ -7,22 +7,24 @@ from typing import (
     Callable,
     Dict,
     List,
-    Optional,
     Tuple,
     Union,
     get_args,
     get_origin,
 )
 
-import werkzeug.exceptions
-from flask import Response, request
-from pydantic import BaseModel, ValidationError
+from flask import request
+from pydantic import BaseModel
 from pydantic_core import ErrorDetails, PydanticUndefined
 from werkzeug.datastructures import FileStorage, Headers, MultiDict
 
 from flask_parameter_validator import _params
 from flask_parameter_validator.dependant import Dependant
-from flask_parameter_validator.utils import ResponseEncoder
+from flask_parameter_validator.exception_handlers import exception_handler
+from flask_parameter_validator.exceptions import (
+    InternalServerError,
+    RequestValidationError,
+)
 
 
 class ParameterValidator:
@@ -154,13 +156,14 @@ class ParameterValidator:
         return solved_params, errors
 
     def __call__(self, *args, **kwargs):
-        solved, errors = self._solve_dependencies()
-        if errors:
-            return Response(
-                json.dumps({"detail": errors}, cls=ResponseEncoder),
-                status=422,
-                mimetype="application/json",
-            )
+        try:
+            solved, errors = self._solve_dependencies()
+            if errors:
+                raise RequestValidationError(errors)
+        except RequestValidationError as rve:
+            return exception_handler[RequestValidationError](rve)
+        except Exception as e:
+            return exception_handler[InternalServerError](e)
         return self._call(*args, **{**kwargs, **solved})
 
     def __repr__(self):
