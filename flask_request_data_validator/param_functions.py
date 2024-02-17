@@ -96,6 +96,37 @@ def Query(
     )
 
 
+def Cookie(
+    default: Any = PydanticUndefined,
+    *,
+    alias: Optional[str] = None,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    gt: Optional[float] = None,
+    ge: Optional[float] = None,
+    lt: Optional[float] = None,
+    le: Optional[float] = None,
+    min_length: Optional[int] = None,
+    max_length: Optional[int] = None,
+    pattern: Optional[str] = None,
+    **extra: Any,
+) -> Any:
+    return _params.Cookie(
+        default=default,
+        alias=alias,
+        title=title,
+        description=description,
+        gt=gt,
+        ge=ge,
+        lt=lt,
+        le=le,
+        min_length=min_length,
+        max_length=max_length,
+        pattern=pattern,
+        **extra,
+    )
+
+
 def Body(
     default: Any = PydanticUndefined,
     *,

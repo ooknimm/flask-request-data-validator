@@ -67,6 +67,9 @@ class ParameterValidator:
         elif isinstance(field, _params.Header):
             self._update_field_info(field, param_name, param)
             dependant.header_params[param_name] = field
+        elif isinstance(field, _params.Cookie):
+            self._update_field_info(field, param_name, param)
+            dependant.cookie_params[param_name] = field
 
     def _get_dependant(self) -> Dependant:
         dependant = Dependant()
@@ -120,6 +123,11 @@ class ParameterValidator:
 
         files: MultiDict[str, FileStorage] = request.files or MultiDict()
         _params, _errors = self.dependant.solve_file_params(files)
+        errors.extend(_errors)
+        solved_params.update(_params)
+
+        cookies: MultiDict[str, str] = request.cookies or MultiDict()
+        _params, _errors = self.dependant.solve_cookie_params(cookies)
         errors.extend(_errors)
         solved_params.update(_params)
 

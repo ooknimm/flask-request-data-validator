@@ -7,6 +7,7 @@ from werkzeug.datastructures import FileStorage, Headers, MultiDict
 
 from flask_request_data_validator._params import (
     Body,
+    Cookie,
     FieldAdapter,
     File,
     Form,
@@ -27,12 +28,14 @@ class Dependant:
         header_params: Optional[Dict[str, Header]] = None,
         body_params: Optional[Dict[str, Body]] = None,
         file_params: Optional[Dict[str, File]] = None,
+        cookie_params: Optional[Dict[str, Cookie]] = None,
     ):
         self.path_params = path_parmas or {}
         self.query_params = query_params or {}
         self.header_params = header_params or {}
         self.body_params = body_params or {}
         self.file_params = file_params or {}
+        self.cookie_params = cookie_params or {}
 
     @property
     def is_form_type(self) -> bool:
@@ -172,3 +175,8 @@ class Dependant:
         self, files: MultiDict[str, FileStorage]
     ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
         return self._solve_params(files, self.file_params)
+
+    def solve_cookie_params(
+        self, cookies: MultiDict[str, str]
+    ) -> Tuple[Dict[str, BaseModel], List[Union[Dict[str, Any], ErrorDetails]]]:
+        return self._solve_params(cookies, self.cookie_params)

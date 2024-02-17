@@ -4,7 +4,7 @@ from flask_request_data_validator import (
     RequestValidationError,
     exception_handler,
     parameter_validator,
-    request_vaildation_error,
+    request_vaildation_error_handler,
 )
 
 app = Flask(__name__)
@@ -26,4 +26,4 @@ def test_new_handler():
     response = client.post("/foo", json={"foo": "bar"})
     assert response.status_code == 200
     assert response.get_data() == b"handler test"
-    exception_handler[RequestValidationError] = request_vaildation_error
+    exception_handler[RequestValidationError] = request_vaildation_error_handler

@@ -10,7 +10,7 @@ from flask_request_data_validator.exceptions import (
 from flask_request_data_validator.utils import ResponseEncoder
 
 
-def request_vaildation_error(exc: RequestValidationError):
+def request_vaildation_error_handler(exc: RequestValidationError):
     return Response(
         json.dumps({"detail": exc.errors}, cls=ResponseEncoder),
         status=422,
@@ -18,7 +18,7 @@ def request_vaildation_error(exc: RequestValidationError):
     )
 
 
-def internal_server_error(exc: Exception):
+def internal_server_error_handler(exc: Exception):
     return Response(
         json.dumps({"detail": "Internal Server Error"}),
         status=500,
@@ -27,6 +27,6 @@ def internal_server_error(exc: Exception):
 
 
 exception_handler: Dict[Any, Callable[[Any], Response]] = {
-    RequestValidationError: request_vaildation_error,
-    InternalServerError: internal_server_error,
+    RequestValidationError: request_vaildation_error_handler,
+    InternalServerError: internal_server_error_handler,
 }
