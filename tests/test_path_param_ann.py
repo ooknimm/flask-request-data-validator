@@ -146,9 +146,9 @@ def test_file_path():
                     {
                         "type": "enum",
                         "loc": ["path", "item_name"],
-                        "msg": "Input should be 'foo','bar' or 'baz'",
+                        "msg": "Input should be 'foo', 'bar' or 'baz'",
                         "input": "qux",
-                        "ctx": {"expected": "'foo','bar' or 'baz'"},
+                        "ctx": {"expected": "'foo', 'bar' or 'baz'"},
                     }
                 ]
             },
