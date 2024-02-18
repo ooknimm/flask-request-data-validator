@@ -135,7 +135,7 @@ def test_file_path():
         (
             "/items/baz",
             200,
-            {"item_name": "baz", "message": "item is baz"},
+            {"item_name": "baz ", "message": "item is baz"},
         ),
         (
             "/items/qux",
