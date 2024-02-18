@@ -17,3 +17,5 @@ from .param_functions import Header as Header
 from .param_functions import Path as Path
 from .param_functions import Query as Query
 from .validator import parameter_validator as parameter_validator
+
+__version__ = "0.0.1"
