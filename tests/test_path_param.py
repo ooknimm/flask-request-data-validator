@@ -66,7 +66,7 @@ def get_model(item_name: ItemName = Path()):
                         "loc": ["path", "user_id"],
                         "msg": "Input should be a valid integer, unable to parse string as an integer",
                         "input": "first",
-                        "url": "https://errors.pydantic.dev/2.1.2/v/int_parsing",
+                        "url": match_pydantic_error_url("int_parsing"),
                     }
                 ]
             },
