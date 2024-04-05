@@ -107,7 +107,7 @@ class Dependant:
                 validated_param, _errors = param.validate(value, loc=loc)
                 if _errors:
                     errors.extend(_errors)
-                if validated_param:
+                if validated_param is not None:
                     solved[param_name] = validated_param
         return solved, errors
 
@@ -149,11 +149,11 @@ class Dependant:
                     solved[param_name] = param.default
                     continue
 
-            vallidated_param, _errors = param.validate(_received_param, loc=loc)
+            validated_param, _errors = param.validate(_received_param, loc=loc)
             if _errors:
                 errors.extend(_errors)
-            if vallidated_param:
-                solved[param_name] = vallidated_param
+            if validated_param is not None:
+                solved[param_name] = validated_param
         return solved, errors
 
     def solve_header_params(
